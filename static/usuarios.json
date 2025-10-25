@@ -1,0 +1,8 @@
+{
+  "danmjp@gmail.com": {
+    "password": "scrypt:32768:8:1$CHDaHyX47cDiQ9Is$3fc61ef1aa9ee6b87d2ccdcd454154e99aa1c20f75f5e1b678518790e741d7cb81af9267e3c50c2572fe185f15c1b6c030ec6cb904ad947af65d6abc7a88f82a",
+    "is_admin": true,
+    "created": "2025-10-25",
+    "expires": "2035-10-23"
+  }
+}

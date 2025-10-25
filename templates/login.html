@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Login - Aviator Pronosticador IA</title>
+<style>
+    body { background:#000; color:#0ff; font-family: Arial, sans-serif; }
+    .card { max-width:400px; margin:60px auto; padding:20px; background:#111; border-radius:10px; box-shadow:0 0 12px cyan; }
+    input { width:100%; padding:10px; margin:8px 0; border-radius:6px; border:1px solid #0ff; background:#000; color:#0ff; }
+    button { width:100%; padding:10px; background:#0ff; color:#000; border:none; border-radius:8px; cursor:pointer; font-weight:bold; }
+    .small { font-size:0.9em; color:#9ff; margin-top:8px; text-align:center; }
+    .error { color:#ff8080; margin-bottom:10px; }
+</style>
+</head>
+<body>
+<div class="card">
+    <h2 style="margin:0 0 8px 0">🔐 Iniciar sesión</h2>
+    {% if error %}
+        <div class="error">{{ error }}</div>
+    {% endif %}
+    <form method="post">
+        <label>Correo</label>
+        <input name="email" type="email" required placeholder="tu@correo.com" />
+        <label>Contraseña</label>
+        <input name="password" type="password" required placeholder="Contraseña" />
+        <button type="submit">Entrar</button>
+    </form>
+    <div class="small">Si eres administrador usa la cuenta configurada.</div>
+</div>
+</body>
+</html>
