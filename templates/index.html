@@ -160,7 +160,7 @@
     <h2>Historial</h2>
     <div id="historial">
         {% for h in historial %}
-            <span>{{h}}</span>
+            <span>{{'%.2f'|format(h)}}</span>
         {% endfor %}
     </div>
 
@@ -198,7 +198,11 @@ function guardar() {
     const cuota = display.innerText.trim();
     if (!cuota) return;
 
-    fetch("/guardar", {method: "POST", body: new URLSearchParams({cuota})})
+    fetch("/guardar", {
+        method: "POST",
+        headers: {"Content-Type": "application/x-www-form-urlencoded"},
+        body: new URLSearchParams({cuota})
+    })
     .then(r => r.json())
     .then(d => {
         if (d.error) alert(d.error);
@@ -208,7 +212,7 @@ function guardar() {
             const span = document.createElement("span");
             span.innerText = parseFloat(cuota).toFixed(2);
             historialDiv.appendChild(span);
-            if (historialDiv.children.length > 40) historialDiv.removeChild(historialDiv.children[0]);
+            if (historialDiv.children.length > 100) historialDiv.removeChild(historialDiv.children[0]);
             historialDiv.scrollLeft = historialDiv.scrollWidth;
         }
         actualizarAnalisis();
@@ -220,18 +224,27 @@ function deshacer() {
     .then(() => {
         if (historialDiv.children.length > 0)
             historialDiv.removeChild(historialDiv.lastChild);
+        mensajeIA.innerText = "";
         actualizarAnalisis();
     });
 }
 
 function limpiarPantalla() {
-    const confirmar = confirm("⚠️ ¿Seguro que deseas borrar el historial visible y reiniciar la pantalla?\n\nEsto NO afecta el análisis de la IA.");
+    const confirmar = confirm("⚠️ ¿Seguro que deseas borrar el historial visible y reiniciar la pantalla?\n\nEsto también reiniciará el análisis de la IA.");
     if (!confirmar) return;
-    historialDiv.innerHTML = "";
-    mensajeIA.innerText = "";
-    display.innerText = "";
-    actualizarAnalisis();
-    alert("✅ Pantalla limpiada correctamente (la IA conserva su historial interno).");
+
+    fetch("/limpiar_todo", {method: "POST"})
+    .then(r => r.json())
+    .then(() => {
+        historialDiv.innerHTML = "";
+        mensajeIA.innerText = "";
+        display.innerText = "";
+        actualizarAnalisis();
+        alert("✅ Pantalla e historial reiniciados correctamente.");
+    })
+    .catch(() => {
+        alert("⚠️ Error al intentar limpiar el historial.");
+    });
 }
 
 function actualizarAnalisis() {

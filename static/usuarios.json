@@ -4,5 +4,11 @@
     "is_admin": true,
     "created": "2025-10-25",
     "expires": "2035-10-23"
+  },
+  "franciscopine43@gmail.com": {
+    "password": "scrypt:32768:8:1$hAo6POWQ0YsrJABY$a99e6879368e8e24f620f59445dab508ea209acf2628b1bb036588dff5d40e00857a7e6459f45b203b88e11ed4040dcf003cd606e406777bd0704ebb90e7c366",
+    "is_admin": false,
+    "created": "2025-10-25",
+    "expires": "2025-10-26"
   }
 }

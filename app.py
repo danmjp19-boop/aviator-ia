@@ -38,7 +38,6 @@ ADMIN_PASS = "Colombia321*"
 # Utilidades de usuarios
 # ===============================
 def inicializar_usuarios_si_no_existe():
-    """Crea usuarios.json con el admin si no existe"""
     if not os.path.exists(os.path.dirname(USERS_PATH)):
         os.makedirs(os.path.dirname(USERS_PATH), exist_ok=True)
     if not os.path.exists(USERS_PATH):
@@ -106,7 +105,6 @@ def verificar_usuario(email, password):
     if email not in users:
         return False, "Usuario no existe"
     info = users[email]
-    # check expiry
     try:
         exp = datetime.strptime(info.get("expires", "1970-01-01"), "%Y-%m-%d")
         if datetime.utcnow().date() > exp.date():
@@ -372,6 +370,14 @@ def borrar_ultimo():
         historial.pop()
         pd.DataFrame(historial, columns=["cuota"]).to_csv(DATA_PATH, index=False)
         entrenar_en_hilo()
+    return jsonify({"status": "ok"})
+
+@app.route("/limpiar_todo", methods=["POST"])
+@login_required
+def limpiar_todo():
+    global historial
+    historial = []
+    pd.DataFrame(historial, columns=["cuota"]).to_csv(DATA_PATH, index=False)
     return jsonify({"status": "ok"})
 
 # ===============================
