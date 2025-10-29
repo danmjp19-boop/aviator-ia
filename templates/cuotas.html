@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Cuotas Aviator</title>
+    <style>
+        body {
+            background-color: #0a0a0a;
+            color: cyan;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 40px;
+        }
+        h1 {
+            color: #00ffff;
+        }
+        .cuota {
+            background: rgba(0,255,255,0.1);
+            border: 1px solid cyan;
+            border-radius: 10px;
+            padding: 10px;
+            margin: 5px auto;
+            width: 200px;
+        }
+        a {
+            color: #ff0066;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>💸 Cuotas del Aviator</h1>
+    <p><a href="/">⬅ Volver</a></p>
+
+    {% if cuotas %}
+        {% for c in cuotas %}
+            <div class="cuota">{{ c }}</div>
+        {% endfor %}
+    {% else %}
+        <p>⚠️ No se pudieron obtener cuotas en este momento.</p>
+    {% endif %}
+</body>
+</html>

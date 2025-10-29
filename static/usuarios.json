@@ -10,5 +10,23 @@
     "is_admin": false,
     "created": "2025-10-25",
     "expires": "2025-10-26"
+  },
+  "jeisson100@gmail.com": {
+    "password": "scrypt:32768:8:1$tcc4ZiejeduVQhiA$565d9516777b8b92420fbdd7b532a1eaaa37ba2c8e146ebb6d07c2fcbdc59a1f3b06851b08fdf1872feca1e31e58f839fba734dcfed227ce54898f17f6bf701d",
+    "is_admin": false,
+    "created": "2025-10-28",
+    "expires": "2025-11-02"
+  },
+  "jhonj0968@gmail.com": {
+    "password": "scrypt:32768:8:1$jfZ8SIi5iMd4dM2I$5b45b404ce1b18abac45c972ba81d1041cfc0615270b71c0ec380b0aa935824f68e54b82d4293e359afcb721762d1c2da7e2d347c330a5d7ade7c48e9251a10d",
+    "is_admin": false,
+    "created": "2025-10-28",
+    "expires": "2025-11-01"
+  },
+  "danmjp19@gmail.com": {
+    "password": "scrypt:32768:8:1$kF5QhyPZc7bnrrIU$9fc4cae6b40aa2277cd33730c1389b750bc1bc832e4f02efb1517524bcf59b2da193d5fab6f637965d7a8e0d85338666d18460ae71be3c718b98095f656da72e",
+    "is_admin": false,
+    "created": "2025-10-29",
+    "expires": "2025-11-10"
   }
 }
