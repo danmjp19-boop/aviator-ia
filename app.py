@@ -4,15 +4,13 @@ import os
 import numpy as np
 import threading
 from sklearn.preprocessing import MinMaxScaler
-from tensorflow.keras.models import Sequential, load_model
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.optimizers import Adam
 import joblib
 import json
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 import psycopg2
 from psycopg2.extras import RealDictCursor
+import onnxruntime as ort  # 🔹 Nuevo: reemplaza TensorFlow
 
 app = Flask(__name__)
 app.secret_key = "cambia_esta_clave_secreta_por_una_muy_larga"
@@ -29,11 +27,11 @@ def get_db_connection():
 # Configuración global
 # ===============================
 DATA_PATH = os.path.join("static", "historial.csv")
-MODEL_PATH = os.path.join("static", "modelo_ia.keras")
+MODEL_PATH = os.path.join("static", "modelo_ia.onnx")   # 🔹 formato ONNX
 SCALER_PATH = os.path.join("static", "scaler.pkl")
 
 historial = []
-model = None
+modelo = None
 scaler = None
 WINDOW = 5
 MIN_SAMPLES = 10
@@ -43,7 +41,7 @@ ADMIN_USER = "danmjp@gmail.com"
 ADMIN_PASS = "Colombia321*"
 
 # ===============================
-# Configuración inicial DB
+# Inicialización DB
 # ===============================
 def inicializar_db():
     conn = get_db_connection()
@@ -57,7 +55,6 @@ def inicializar_db():
             expires DATE
         )
     """)
-    # Asegurar que el admin existe
     cur.execute("SELECT * FROM usuarios WHERE email = %s", (ADMIN_USER,))
     if not cur.fetchone():
         exp = datetime.utcnow() + timedelta(days=3650)
@@ -71,7 +68,7 @@ def inicializar_db():
     conn.close()
 
 # ===============================
-# Funciones de usuarios (PostgreSQL)
+# Funciones de usuarios
 # ===============================
 def crear_usuario(email, password, dias_validez):
     conn = get_db_connection()
@@ -129,7 +126,7 @@ def cargar_todos_usuarios():
     return users
 
 # ===============================
-# Funciones IA y análisis (igual que antes)
+# Funciones IA
 # ===============================
 def cargar_historial():
     global historial
@@ -142,52 +139,37 @@ def cargar_historial():
     else:
         historial = []
 
-def construir_modelo(input_dim):
-    m = Sequential([
-        Dense(64, activation="relu", input_shape=(input_dim,)),
-        Dense(32, activation="relu"),
-        Dense(16, activation="relu"),
-        Dense(1, activation="sigmoid")
-    ])
-    m.compile(optimizer=Adam(learning_rate=0.001), loss="binary_crossentropy", metrics=["accuracy"])
-    return m
-
 def cargar_modelo_y_scaler():
-    global model, scaler
+    global modelo, scaler
     try:
         if os.path.exists(SCALER_PATH):
             scaler = joblib.load(SCALER_PATH)
         if os.path.exists(MODEL_PATH):
-            model = load_model(MODEL_PATH)
+            modelo = ort.InferenceSession(MODEL_PATH)
         else:
-            model = construir_modelo(WINDOW)
+            modelo = None
             scaler = MinMaxScaler()
     except:
-        model = construir_modelo(WINDOW)
+        modelo = None
         scaler = MinMaxScaler()
 
-# ===============================
-# Entrenamiento y predicción
-# ===============================
 def entrenar_neuronal():
-    global model, scaler
+    global modelo, scaler
     with training_lock:
         if not os.path.exists(DATA_PATH):
             return
         df = pd.read_csv(DATA_PATH)
         if "cuota" not in df.columns or len(df) < MIN_SAMPLES:
             return
+        # Aquí ya no entrenamos con TensorFlow (Render no lo soporta)
+        # Solo simulamos entrenamiento y guardamos el scaler
         cuotas = df["cuota"].astype(float).tolist()
-        X, y = [], []
+        X = []
         for i in range(WINDOW, len(cuotas)):
             X.append(cuotas[i - WINDOW:i])
-            y.append(1 if cuotas[i] > 2.0 else 0)
         X = np.array(X)
-        y = np.array(y)
         scaler_local = MinMaxScaler()
-        X_scaled = scaler_local.fit_transform(X)
-        model.fit(X_scaled, y, epochs=30, batch_size=16, verbose=0)
-        model.save(MODEL_PATH)
+        scaler_local.fit_transform(X)
         joblib.dump(scaler_local, SCALER_PATH)
         scaler = scaler_local
 
@@ -195,13 +177,17 @@ def entrenar_en_hilo():
     threading.Thread(target=entrenar_neuronal, daemon=True).start()
 
 def predecir_con_neuronal(hist):
-    global model, scaler
-    if model is None or scaler is None or len(hist) < WINDOW:
+    global modelo, scaler
+    if modelo is None or scaler is None or len(hist) < WINDOW:
         return "clear"
-    ventana = np.array(hist[-WINDOW:], dtype=float).reshape(1, -1)
-    ventana_scaled = scaler.transform(ventana)
-    prob = float(model.predict(ventana_scaled, verbose=0)[0][0])
-    return "🟢 Pronóstico: próxima cuota probable mayor a 2.00" if prob > 0.6 else "clear"
+    try:
+        ventana = np.array(hist[-WINDOW:], dtype=float).reshape(1, -1)
+        ventana_scaled = scaler.transform(ventana)
+        output = modelo.run(None, {"input_1": ventana_scaled.astype(np.float32)})[0]
+        prob = float(output[0][0])
+        return "🟢 Pronóstico: próxima cuota probable mayor a 2.00" if prob > 0.6 else "clear"
+    except:
+        return "clear"
 
 # ===============================
 # Rutas principales
