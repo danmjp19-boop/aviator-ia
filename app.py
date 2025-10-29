@@ -18,7 +18,7 @@ app.secret_key = "cambia_esta_clave_secreta_por_una_muy_larga"
 # ===============================
 # Conexión a PostgreSQL (Render)
 # ===============================
-DATABASE_URL = "postgresql://base_de_datos_aviator_user:xBYYj4vWFPYYMsjoN3xRMBGJbC6e0ZyL@dpg-d40omtmr433s73a4esf0-a/base_de_datos_aviator"
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 def get_db_connection():
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
