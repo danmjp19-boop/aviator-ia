@@ -258,7 +258,7 @@ if __name__ == "__main__":
     cargar_modelo_y_scaler()
     app.run(host="0.0.0.0", port=5000, debug=True)
 else:
-    # Cuando Render ejecuta gunicorn, estas funciones deben cargarse igualmente
+    # Para Render (modo producción con gunicorn)
     inicializar_db()
     cargar_historial()
     cargar_modelo_y_scaler()
