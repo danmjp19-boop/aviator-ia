@@ -1,6 +1,14 @@
 services:
   - type: web
-    name: aviator-pronosticador
+    name: aviator-web
     env: python
-    buildCommand: pip install -r requirements.txt
+    plan: free
+    buildCommand: ""
     startCommand: gunicorn app:app
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: base_de_datos_aviator
+          property: connectionString
+databases:
+  - name: base_de_datos_aviator

@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 import psycopg2
 from psycopg2.extras import RealDictCursor
-import onnxruntime as ort  # 🔹 Nuevo: reemplaza TensorFlow
+import onnxruntime as ort  # 🔹 Reemplaza TensorFlow
 
 app = Flask(__name__)
 app.secret_key = "cambia_esta_clave_secreta_por_una_muy_larga"
@@ -27,7 +27,7 @@ def get_db_connection():
 # Configuración global
 # ===============================
 DATA_PATH = os.path.join("static", "historial.csv")
-MODEL_PATH = os.path.join("static", "modelo_ia.onnx")   # 🔹 formato ONNX
+MODEL_PATH = os.path.join("static", "modelo_ia.onnx")
 SCALER_PATH = os.path.join("static", "scaler.pkl")
 
 historial = []
@@ -48,21 +48,22 @@ def inicializar_db():
     cur = conn.cursor()
     cur.execute("""
         CREATE TABLE IF NOT EXISTS usuarios (
-            email TEXT PRIMARY KEY,
-            password TEXT NOT NULL,
-            is_admin BOOLEAN DEFAULT FALSE,
-            created DATE,
-            expires DATE
+            id SERIAL PRIMARY KEY,
+            correo VARCHAR(255) UNIQUE NOT NULL,
+            contrasena VARCHAR(255) NOT NULL,
+            dias_asignados INTEGER DEFAULT 0,
+            fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            fecha_expiracion TIMESTAMP,
+            es_admin BOOLEAN DEFAULT FALSE
         )
     """)
-    cur.execute("SELECT * FROM usuarios WHERE email = %s", (ADMIN_USER,))
+    cur.execute("SELECT * FROM usuarios WHERE correo = %s", (ADMIN_USER,))
     if not cur.fetchone():
         exp = datetime.utcnow() + timedelta(days=3650)
         cur.execute("""
-            INSERT INTO usuarios (email, password, is_admin, created, expires)
-            VALUES (%s, %s, TRUE, %s, %s)
-        """, (ADMIN_USER, generate_password_hash(ADMIN_PASS),
-              datetime.utcnow().date(), exp.date()))
+            INSERT INTO usuarios (correo, contrasena, dias_asignados, fecha_expiracion, es_admin)
+            VALUES (%s, %s, %s, %s, TRUE)
+        """, (ADMIN_USER, generate_password_hash(ADMIN_PASS), 9999, exp))
     conn.commit()
     cur.close()
     conn.close()
@@ -70,49 +71,51 @@ def inicializar_db():
 # ===============================
 # Funciones de usuarios
 # ===============================
-def crear_usuario(email, password, dias_validez):
+def crear_usuario(correo, password, dias_validez):
     conn = get_db_connection()
     cur = conn.cursor()
     exp = datetime.utcnow() + timedelta(days=int(dias_validez))
     cur.execute("""
-        INSERT INTO usuarios (email, password, is_admin, created, expires)
-        VALUES (%s, %s, FALSE, %s, %s)
-        ON CONFLICT (email) DO UPDATE
-        SET password = EXCLUDED.password, expires = EXCLUDED.expires
-    """, (email, generate_password_hash(password), datetime.utcnow().date(), exp.date()))
+        INSERT INTO usuarios (correo, contrasena, dias_asignados, fecha_expiracion, es_admin)
+        VALUES (%s, %s, %s, %s, FALSE)
+        ON CONFLICT (correo) DO UPDATE
+        SET contrasena = EXCLUDED.contrasena,
+            fecha_expiracion = EXCLUDED.fecha_expiracion,
+            dias_asignados = EXCLUDED.dias_asignados
+    """, (correo, generate_password_hash(password), dias_validez, exp))
     conn.commit()
     cur.close()
     conn.close()
 
-def eliminar_usuario(email):
+def eliminar_usuario(correo):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("DELETE FROM usuarios WHERE email = %s", (email,))
+    cur.execute("DELETE FROM usuarios WHERE correo = %s", (correo,))
     conn.commit()
     cur.close()
     conn.close()
 
-def extender_usuario(email, dias_extra):
+def extender_usuario(correo, dias_extra):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("UPDATE usuarios SET expires = expires + INTERVAL '%s days' WHERE email = %s",
-                (int(dias_extra), email))
+    cur.execute("UPDATE usuarios SET fecha_expiracion = fecha_expiracion + INTERVAL '%s days' WHERE correo = %s",
+                (int(dias_extra), correo))
     conn.commit()
     cur.close()
     conn.close()
 
-def verificar_usuario(email, password):
+def verificar_usuario(correo, password):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM usuarios WHERE email = %s", (email,))
+    cur.execute("SELECT * FROM usuarios WHERE correo = %s", (correo,))
     user = cur.fetchone()
     cur.close()
     conn.close()
     if not user:
         return False, "Usuario no existe"
-    if datetime.utcnow().date() > user["expires"]:
+    if user["fecha_expiracion"] and datetime.utcnow() > user["fecha_expiracion"]:
         return False, "⏳ El tiempo de uso ha expirado"
-    if not check_password_hash(user["password"], password):
+    if not check_password_hash(user["contrasena"], password):
         return False, "Contraseña incorrecta"
     return True, user
 
@@ -161,8 +164,6 @@ def entrenar_neuronal():
         df = pd.read_csv(DATA_PATH)
         if "cuota" not in df.columns or len(df) < MIN_SAMPLES:
             return
-        # Aquí ya no entrenamos con TensorFlow (Render no lo soporta)
-        # Solo simulamos entrenamiento y guardamos el scaler
         cuotas = df["cuota"].astype(float).tolist()
         X = []
         for i in range(WINDOW, len(cuotas)):
@@ -195,12 +196,12 @@ def predecir_con_neuronal(hist):
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        email = request.form.get("email", "").strip()
+        correo = request.form.get("email", "").strip()
         password = request.form.get("password", "").strip()
-        ok, info = verificar_usuario(email, password)
+        ok, info = verificar_usuario(correo, password)
         if not ok:
             return render_template("login.html", error=info)
-        session["user"] = email
+        session["user"] = correo
         return redirect(url_for("index"))
     return render_template("login.html")
 
