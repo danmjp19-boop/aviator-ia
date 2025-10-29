@@ -1,6 +1,6 @@
 Flask
 gunicorn
-tensorflow-cpu==2.16.1
+tensorflow-cpu==2.15.0
 pandas
 numpy
 scikit-learn
