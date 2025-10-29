@@ -4,5 +4,4 @@ gunicorn
 pandas
 numpy
 scikit-learn
-sqlite3
 psycopg2-binary
