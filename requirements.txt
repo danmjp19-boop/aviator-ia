@@ -1,7 +1,7 @@
-Flask
-tensorflow
-gunicorn
-pandas
-numpy
-scikit-learn
-psycopg2-binary
+Flask==3.0.3
+gunicorn==23.0.0
+pandas==2.2.3
+numpy==1.26.4
+tensorflow-cpu==2.16.1
+scikit-learn==1.5.2
+psycopg2-binary==2.9.9
