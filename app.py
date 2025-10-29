@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session 
 import pandas as pd
 import os
 import numpy as np
@@ -38,6 +38,7 @@ ADMIN_PASS = "Colombia321*"
 # Utilidades de usuarios
 # ===============================
 def inicializar_usuarios_si_no_existe():
+    """Crea el archivo de usuarios solo si no existe."""
     if not os.path.exists(os.path.dirname(USERS_PATH)):
         os.makedirs(os.path.dirname(USERS_PATH), exist_ok=True)
     if not os.path.exists(USERS_PATH):
@@ -53,6 +54,24 @@ def inicializar_usuarios_si_no_existe():
         }
         with open(USERS_PATH, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
+    else:
+        # Si existe, verificar que el admin esté incluido (sin borrar otros usuarios)
+        with open(USERS_PATH, "r", encoding="utf-8") as f:
+            try:
+                data = json.load(f)
+            except Exception:
+                data = {}
+        if ADMIN_USER not in data:
+            admin_expire = (datetime.utcnow() + timedelta(days=3650)).strftime("%Y-%m-%d")
+            admin_hashed = generate_password_hash(ADMIN_PASS)
+            data[ADMIN_USER] = {
+                "password": admin_hashed,
+                "is_admin": True,
+                "created": datetime.utcnow().strftime("%Y-%m-%d"),
+                "expires": admin_expire
+            }
+            with open(USERS_PATH, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
 
 def cargar_usuarios():
     if not os.path.exists(USERS_PATH):
