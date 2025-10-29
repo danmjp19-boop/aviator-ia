@@ -42,18 +42,26 @@
     <div class="panel" style="margin-top:12px;">
         <h3>Usuarios existentes</h3>
         <table>
-            <thead><tr><th>Email</th><th>Creado</th><th>Expira</th><th>Admin</th><th>Acciones</th></tr></thead>
-            <tbody id="users_table">
-            {% for email, info in users.items() %}
+            <thead>
                 <tr>
-                    <td>{{ email }}</td>
+                    <th>Email</th>
+                    <th>Creado</th>
+                    <th>Expira</th>
+                    <th>Admin</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="users_table">
+            {% for info in users %}
+                <tr>
+                    <td>{{ info.email }}</td>
                     <td>{{ info.created }}</td>
                     <td>{{ info.expires }}</td>
                     <td>{{ 'Sí' if info.is_admin else 'No' }}</td>
                     <td>
                         {% if not info.is_admin %}
-                        <button onclick="eliminar('{{ email }}')">Eliminar</button>
-                        <button onclick="extenderPrompt('{{ email }}')">Extender</button>
+                        <button onclick="eliminar('{{ info.email }}')">Eliminar</button>
+                        <button onclick="extenderPrompt('{{ info.email }}')">Extender</button>
                         {% else %}
                         <span class="small">Cuenta admin</span>
                         {% endif %}
@@ -83,16 +91,16 @@ function crear(){
 }
 
 function eliminar(email){
-    if(!confirm("Eliminar usuario "+email+" ?")) return;
+    if(!confirm("¿Eliminar usuario "+email+" ?")) return;
     fetch("/eliminar_usuario", {method:"POST", body:new URLSearchParams({email})})
-    .then(r=>r.json()).then(d=>{ if(d.ok) location.reload(); else alert("Error"); });
+    .then(r=>r.json()).then(d=>{ if(d.ok) location.reload(); else alert("Error eliminando usuario"); });
 }
 
 function extenderPrompt(email){
     const dias = prompt("¿Cuántos días extender para "+email+"?", "7");
     if(!dias) return;
     fetch("/extender_usuario",{method:"POST", body:new URLSearchParams({email,dias})})
-    .then(r=>r.json()).then(d=>{ if(d.ok) location.reload(); else alert("Error"); });
+    .then(r=>r.json()).then(d=>{ if(d.ok) location.reload(); else alert("Error extendiendo usuario"); });
 }
 </script>
 </body>
