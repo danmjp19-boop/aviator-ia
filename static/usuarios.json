@@ -1,32 +1,26 @@
 {
   "danmjp@gmail.com": {
-    "password": "scrypt:32768:8:1$CHDaHyX47cDiQ9Is$3fc61ef1aa9ee6b87d2ccdcd454154e99aa1c20f75f5e1b678518790e741d7cb81af9267e3c50c2572fe185f15c1b6c030ec6cb904ad947af65d6abc7a88f82a",
+    "password": "scrypt:32768:8:1$iebWG9sJYv1zKCZ3$ad3a4327e979a6e322b11e3d962ecb67955bbc871d3a9d45d7e100ec295da4ba6406f42d80c42648c1ac8528ba37d4157fdf14eb86cd8e074a820bc307f3a8f3",
     "is_admin": true,
-    "created": "2025-10-25",
-    "expires": "2035-10-23"
+    "created": "2025-10-30",
+    "expires": "2035-10-28"
   },
   "franciscopine43@gmail.com": {
-    "password": "scrypt:32768:8:1$hAo6POWQ0YsrJABY$a99e6879368e8e24f620f59445dab508ea209acf2628b1bb036588dff5d40e00857a7e6459f45b203b88e11ed4040dcf003cd606e406777bd0704ebb90e7c366",
+    "password": "scrypt:32768:8:1$mBlsCNJPfKrxSKpw$82242639da7374a761b708929570e76be554f499c429d379a72aceff9ba2a71719c0313495a2aab322ba28fb763a3c24c73464a11ae16f37b03e9c6b2c1e413c",
     "is_admin": false,
-    "created": "2025-10-25",
-    "expires": "2025-10-26"
-  },
-  "jeisson100@gmail.com": {
-    "password": "scrypt:32768:8:1$tcc4ZiejeduVQhiA$565d9516777b8b92420fbdd7b532a1eaaa37ba2c8e146ebb6d07c2fcbdc59a1f3b06851b08fdf1872feca1e31e58f839fba734dcfed227ce54898f17f6bf701d",
-    "is_admin": false,
-    "created": "2025-10-28",
-    "expires": "2025-11-02"
+    "created": "2025-10-30",
+    "expires": "2025-11-05"
   },
   "jhonj0968@gmail.com": {
-    "password": "scrypt:32768:8:1$jfZ8SIi5iMd4dM2I$5b45b404ce1b18abac45c972ba81d1041cfc0615270b71c0ec380b0aa935824f68e54b82d4293e359afcb721762d1c2da7e2d347c330a5d7ade7c48e9251a10d",
+    "password": "scrypt:32768:8:1$SXpoYtN72F3sIKjS$4215479b1e57e96743f7dcddffa5eb381b140bca0b7ae5111e3e1491f53fc853b4aa1f4187cc00221bd9c74515fcf529882db393b5d7b99d32f15f0905a195f0",
     "is_admin": false,
-    "created": "2025-10-28",
-    "expires": "2025-11-01"
+    "created": "2025-10-30",
+    "expires": "2025-10-31"
   },
-  "danmjp19@gmail.com": {
-    "password": "scrypt:32768:8:1$kF5QhyPZc7bnrrIU$9fc4cae6b40aa2277cd33730c1389b750bc1bc832e4f02efb1517524bcf59b2da193d5fab6f637965d7a8e0d85338666d18460ae71be3c718b98095f656da72e",
+  "jeisson100@gmail.com": {
+    "password": "scrypt:32768:8:1$dHH50xz18TP92gR2$85f013d078d04505fd0f58cde1d683da6ede11f7425809272c9542aad27158b8aaf5949f21f492e6ca816a45199ea2170ce3cd4e00ccb4ce5c90c09fc253662f",
     "is_admin": false,
-    "created": "2025-10-29",
-    "expires": "2025-11-10"
+    "created": "2025-10-30",
+    "expires": "2025-11-29"
   }
 }
