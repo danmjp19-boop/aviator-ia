@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session 
 import pandas as pd
 import os
 import numpy as np
@@ -11,9 +11,17 @@ import joblib
 import json
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_sqlalchemy import SQLAlchemy   # ✅ NUEVO
 
 app = Flask(__name__)
 app.secret_key = "cambia_esta_clave_secreta_por_una_muy_larga"
+
+# ===============================
+# 🔗 Configuración base de datos PostgreSQL
+# ===============================
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
 
 # ===============================
 # Configuración global
@@ -309,49 +317,38 @@ def admin_panel():
 @admin_required
 def crear_usuario_route():
     try:
-        # 1) Intentar leer JSON si viene así
         data = request.get_json(silent=True)
-        # 2) Si no hay JSON, usar form (o request.data en último recurso)
         if not data:
             data = request.form or {}
             if not data and request.data:
                 try:
                     import urllib.parse
                     parsed = urllib.parse.parse_qs(request.data.decode())
-                    # parsed values are lists -> convertir a dict simple
                     data = {k: v[0] for k, v in parsed.items()}
                 except Exception:
                     data = {}
-
-        # Extraer campos con tolerancia a formatos
         email = (data.get("email") or "").strip()
         password = (data.get("password") or "").strip()
         dias = data.get("dias") or data.get("dias_validez") or "1"
         dias = str(dias).strip() if dias is not None else "1"
         if dias == "":
             dias = "1"
-
-        # Validaciones
         if not email or not password:
             return jsonify({"error": "Email y contraseña obligatorios"}), 400
-
         users = cargar_usuarios()
         if email in users:
             return jsonify({"error": "El usuario ya existe"}), 400
-
-        # Crear usuario
         crear_usuario(email, password, dias)
         return jsonify({"ok": True})
     except Exception as e:
         print("⚠️ Error creando usuario (crear_usuario_route):", e)
         return jsonify({"error": "Error creando usuario"}), 400
+
 @app.route("/eliminar_usuario", methods=["POST"])
 @admin_required
 def eliminar_usuario_route():
     try:
-        # 1) Intentar leer JSON si viene así
         data = request.get_json(silent=True)
-        # 2) Si no hay JSON, usar form (o request.data)
         if not data:
             data = request.form or {}
             if not data and request.data:
@@ -361,21 +358,19 @@ def eliminar_usuario_route():
                     data = {k: v[0] for k, v in parsed.items()}
                 except Exception:
                     data = {}
-
         email = (data.get("email") or "").strip()
         if not email:
             return jsonify({"error": "Falta el email"}), 400
-
         users = cargar_usuarios()
         if email not in users:
             return jsonify({"error": "Usuario no encontrado"}), 400
-
         del users[email]
         guardar_usuarios(users)
         return jsonify({"ok": True})
     except Exception as e:
         print("⚠️ Error eliminando usuario:", e)
         return jsonify({"error": "Error eliminando usuario"}), 400
+
 # ===============================
 # Rutas IA protegidas
 # ===============================
@@ -424,6 +419,8 @@ def limpiar_todo():
 # Main
 # ===============================
 if __name__ == "__main__":
+    with app.app_context():
+        db.create_all()   # ✅ NUEVO: crea las tablas si no existen
     inicializar_usuarios_si_no_existe()
     cargar_historial()
     cargar_modelo_y_scaler()
