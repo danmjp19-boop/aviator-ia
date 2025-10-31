@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session 
 import pandas as pd
 import os
 import numpy as np
@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.secret_key = "cambia_esta_clave_secreta_por_una_muy_larga"
+app.secret_key = os.getenv("SECRET_KEY", "cambia_esta_clave_secreta_por_una_muy_larga")
 
 # ===============================
 # Configuración global
@@ -31,8 +31,8 @@ MIN_SAMPLES = 10
 training_lock = threading.Lock()
 
 # Admin por defecto
-ADMIN_USER = "danmjp@gmail.com"
-ADMIN_PASS = "Colombia321*"
+ADMIN_USER = os.getenv("ADMIN_USER", "danmjp@gmail.com")
+ADMIN_PASS = os.getenv("ADMIN_PASS", "Colombia321*")
 
 # ===============================
 # Utilidades de usuarios
@@ -142,17 +142,16 @@ def cargar_modelo_y_scaler():
     global model, scaler
     try:
         if os.path.exists(SCALER_PATH):
-            scaler_local = joblib.load(SCALER_PATH)
-            scaler = scaler_local
+            scaler = joblib.load(SCALER_PATH)
+        else:
+            scaler = MinMaxScaler()
         if os.path.exists(MODEL_PATH):
             model_local = load_model(MODEL_PATH)
             if model_local.input_shape[1] != WINDOW:
                 model_local = construir_modelo(WINDOW)
-                scaler_local = MinMaxScaler()
-                model = model_local
-                scaler = scaler_local
-            else:
-                model = model_local
+        else:
+            model_local = construir_modelo(WINDOW)
+        model = model_local
     except Exception as e:
         print("⚠️ Error cargando modelo:", e)
         model = construir_modelo(WINDOW)
@@ -218,34 +217,11 @@ def predecir_con_neuronal(hist):
         return "clear"
 
 # ===============================
-# Análisis
+# Rutas Flask
 # ===============================
-@app.route("/analisis")
-def analisis():
-    global historial
-    if not historial:
-        return jsonify({"resumen": "Sin datos suficientes para análisis."})
-    df = pd.Series(historial[-40:])
-    promedio = df.mean()
-    maximo = df.max()
-    minimo = df.min()
-    mayores_2 = (df > 2.0).mean() * 100
-    tendencia = "🔴 Bajista"
-    if promedio > 2.0 or mayores_2 > 50:
-        tendencia = "🟢 Alcista"
-    resumen = (
-        f"Promedio: {promedio:.2f}\n"
-        f"Máx: {maximo:.2f} | Mín: {minimo:.2f}\n"
-        f"% > 2.00: {mayores_2:.1f}%\n"
-        f"Tendencia general: {tendencia}"
-    )
-    return jsonify({"resumen": resumen})
+from functools import wraps
 
-# ===============================
-# Decoradores de autenticación
-# ===============================
 def login_required(f):
-    from functools import wraps
     @wraps(f)
     def decorated(*args, **kwargs):
         if "user" not in session:
@@ -266,7 +242,6 @@ def login_required(f):
     return decorated
 
 def admin_required(f):
-    from functools import wraps
     @wraps(f)
     def decorated(*args, **kwargs):
         if "user" not in session:
@@ -278,9 +253,6 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
-# ===============================
-# Rutas Flask
-# ===============================
 @app.route("/login", methods=["GET", "POST"])
 def login():
     inicializar_usuarios_si_no_existe()
@@ -299,86 +271,6 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
-@app.route("/admin")
-@admin_required
-def admin_panel():
-    users = cargar_usuarios()
-    return render_template("admin.html", users=users, admin=session.get("user"))
-
-@app.route("/crear_usuario", methods=["POST"])
-@admin_required
-def crear_usuario_route():
-    try:
-        # 1) Intentar leer JSON si viene así
-        data = request.get_json(silent=True)
-        # 2) Si no hay JSON, usar form (o request.data en último recurso)
-        if not data:
-            data = request.form or {}
-            if not data and request.data:
-                try:
-                    import urllib.parse
-                    parsed = urllib.parse.parse_qs(request.data.decode())
-                    # parsed values are lists -> convertir a dict simple
-                    data = {k: v[0] for k, v in parsed.items()}
-                except Exception:
-                    data = {}
-
-        # Extraer campos con tolerancia a formatos
-        email = (data.get("email") or "").strip()
-        password = (data.get("password") or "").strip()
-        dias = data.get("dias") or data.get("dias_validez") or "1"
-        dias = str(dias).strip() if dias is not None else "1"
-        if dias == "":
-            dias = "1"
-
-        # Validaciones
-        if not email or not password:
-            return jsonify({"error": "Email y contraseña obligatorios"}), 400
-
-        users = cargar_usuarios()
-        if email in users:
-            return jsonify({"error": "El usuario ya existe"}), 400
-
-        # Crear usuario
-        crear_usuario(email, password, dias)
-        return jsonify({"ok": True})
-    except Exception as e:
-        print("⚠️ Error creando usuario (crear_usuario_route):", e)
-        return jsonify({"error": "Error creando usuario"}), 400
-@app.route("/eliminar_usuario", methods=["POST"])
-@admin_required
-def eliminar_usuario_route():
-    try:
-        # 1) Intentar leer JSON si viene así
-        data = request.get_json(silent=True)
-        # 2) Si no hay JSON, usar form (o request.data)
-        if not data:
-            data = request.form or {}
-            if not data and request.data:
-                try:
-                    import urllib.parse
-                    parsed = urllib.parse.parse_qs(request.data.decode())
-                    data = {k: v[0] for k, v in parsed.items()}
-                except Exception:
-                    data = {}
-
-        email = (data.get("email") or "").strip()
-        if not email:
-            return jsonify({"error": "Falta el email"}), 400
-
-        users = cargar_usuarios()
-        if email not in users:
-            return jsonify({"error": "Usuario no encontrado"}), 400
-
-        del users[email]
-        guardar_usuarios(users)
-        return jsonify({"ok": True})
-    except Exception as e:
-        print("⚠️ Error eliminando usuario:", e)
-        return jsonify({"error": "Error eliminando usuario"}), 400
-# ===============================
-# Rutas IA protegidas
-# ===============================
 @app.route("/")
 @login_required
 def index():
@@ -386,46 +278,17 @@ def index():
     usuario_actual = session.get("user", "Desconocido")
     return render_template("index.html", historial=historial, usuario=usuario_actual)
 
-@app.route("/guardar", methods=["POST"])
-@login_required
-def guardar():
-    cuota = request.form.get("cuota", "").strip()
-    try:
-        valor = float(cuota)
-    except:
-        return jsonify({"error": "Valor inválido"})
-    historial.append(valor)
-    if len(historial) > 100:
-        historial.pop(0)
-    os.makedirs(os.path.dirname(DATA_PATH), exist_ok=True)
-    pd.DataFrame(historial, columns=["cuota"]).to_csv(DATA_PATH, index=False)
-    entrenar_en_hilo()
-    pred = predecir_con_neuronal(historial)
-    return jsonify({"prediccion": pred if pred else "clear"})
-
-@app.route("/borrar_ultimo", methods=["POST"])
-@login_required
-def borrar_ultimo():
-    if historial:
-        historial.pop()
-        pd.DataFrame(historial, columns=["cuota"]).to_csv(DATA_PATH, index=False)
-        entrenar_en_hilo()
-    return jsonify({"status": "ok"})
-
-@app.route("/limpiar_todo", methods=["POST"])
-@login_required
-def limpiar_todo():
-    global historial
-    historial = []
-    pd.DataFrame(historial, columns=["cuota"]).to_csv(DATA_PATH, index=False)
-    return jsonify({"status": "ok"})
-
 # ===============================
-# Main
+# Inicialización (Render + local)
 # ===============================
-if __name__ == "__main__":
+def init_app():
     inicializar_usuarios_si_no_existe()
     cargar_historial()
     cargar_modelo_y_scaler()
     entrenar_en_hilo()
+    return app
+
+app = init_app()
+
+if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
