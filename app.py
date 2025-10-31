@@ -315,4 +315,6 @@ if __name__ == "__main__":
     cargar_historial()
     cargar_modelo_y_scaler()
     entrenar_en_hilo()
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    # Solo ejecutar el servidor Flask localmente, no en Render
+    from waitress import serve
+    serve(app, host="0.0.0.0", port=5000)
