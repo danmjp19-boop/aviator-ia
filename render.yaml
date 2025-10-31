@@ -11,10 +11,11 @@ services:
           name: base_de_datos_aviator
           property: connectionString
       - key: SECRET_KEY
-        value: "cambia_esta_clave_en_render"
+        value: cambia_esta_clave_en_render
       - key: ADMIN_USER
-        value: "danmjp@gmail.com"
+        value: dannjp@gmail.com
       - key: ADMIN_PASS
-        value: "Colombia321*"
+        value: Colombia321*
+
 databases:
   - name: base_de_datos_aviator
