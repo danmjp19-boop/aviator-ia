@@ -1,13 +1,42 @@
+# === Archivos y carpetas a ignorar ===
+
+# Entorno virtual
 venv/
+.env/
+
+# Cachés y archivos temporales
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-instance/
-.env
+
+# Archivos del sistema
 .DS_Store
-*.db
-*.sqlite3
+Thumbs.db
+
+# Archivos de modelo y datos locales (no necesarios en Render)
 *.pkl
-*.onnx
-static/historial.csv
+*.keras
+*.h5
+*.csv
+*.json
+
+# Pero permite tus plantillas y estáticos importantes
+!static/
+!templates/
+
+# Ignorar solo archivos de usuarios dentro de static
+static/usuarios.json
+
+# Configuración local y de entorno
+*.sqlite3
+*.db
+*.log
+
+# Archivos específicos de IDE o editor
+.vscode/
+.idea/
+
+# Archivos de Render y Git
+render.yaml
+Procfile

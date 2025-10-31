@@ -10,18 +10,25 @@ import json
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from flask_cors import CORS
 
 # ==============================
 # Configuración base
 # ==============================
 app = Flask(__name__)
-from flask_cors import CORS
 CORS(app)
-app.config['SERVER_NAME'] = None
+
+# 🔧 Configuración segura para Render (sin SERVER_NAME)
 app.config['PREFERRED_URL_SCHEME'] = 'https'
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
+@app.before_request
+def make_session_permanent():
+    session.permanent = True
+
 os.makedirs("static", exist_ok=True)
+
 # Clave secreta obligatoria
 app.secret_key = os.getenv("SECRET_KEY")
 if not app.secret_key:
@@ -41,7 +48,7 @@ def inicializar_usuarios_si_no_existe():
     if not os.path.exists(os.path.dirname(USERS_PATH)):
         os.makedirs(os.path.dirname(USERS_PATH), exist_ok=True)
     if not os.path.exists(USERS_PATH):
-        print("📁 Creando archivo de usuarios:", USERS_PATH)  # 👈 Mensaje de depuración
+        print("📁 Creando archivo de usuarios:", USERS_PATH)
         admin_expire = (datetime.utcnow() + timedelta(days=3650)).strftime("%Y-%m-%d")
         admin_hashed = generate_password_hash(ADMIN_PASS)
         data = {
