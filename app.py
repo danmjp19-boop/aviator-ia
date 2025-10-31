@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session  
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session   
 import pandas as pd
 import os
 import numpy as np
@@ -307,6 +307,13 @@ def limpiar_todo():
     historial = []
     pd.DataFrame(historial, columns=["cuota"]).to_csv(DATA_PATH, index=False)
     return jsonify({"status": "ok"})
+
+# ===============================
+# Endpoint para Render
+# ===============================
+@app.route('/ping')
+def ping():
+    return "pong", 200
 
 # ===============================
 # Main
