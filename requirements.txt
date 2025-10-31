@@ -9,4 +9,4 @@ onnxruntime==1.23.2
 joblib==1.3.2
 python-dateutil==2.9.0.post0
 waitress
-
+Flask-Cors==4.0.0
