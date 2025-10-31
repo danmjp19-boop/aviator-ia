@@ -6,7 +6,6 @@
 <title>Admin - Aviator Pronosticador IA</title>
 <style>
     body { background:#000; color:#0ff; font-family: Arial, sans-serif; padding:20px; }
-    .wrap { max-width:900px; margin:0 auto; }
     .panel { background:#111; padding:16px; border-radius:10px; box-shadow:0 0 12px cyan; }
     input, select { padding:8px; margin:6px 0; border-radius:6px; border:1px solid #0ff; background:#000; color:#0ff; width:100%; }
     button { padding:8px 12px; background:#0ff; color:#000; border:none; border-radius:6px; cursor:pointer; }
