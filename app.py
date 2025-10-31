@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session 
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session  
 import pandas as pd
 import os
 import numpy as np
@@ -8,10 +8,9 @@ from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.optimizers import Adam
 import joblib
-import json
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_sqlalchemy import SQLAlchemy   # ✅ NUEVO
+from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 app.secret_key = "cambia_esta_clave_secreta_por_una_muy_larga"
@@ -29,7 +28,6 @@ db = SQLAlchemy(app)
 DATA_PATH = os.path.join("static", "historial.csv")
 MODEL_PATH = os.path.join("static", "modelo_ia.keras")
 SCALER_PATH = os.path.join("static", "scaler.pkl")
-USERS_PATH = os.path.join("static", "usuarios.json")
 
 historial = []
 model = None
@@ -43,85 +41,30 @@ ADMIN_USER = "danmjp@gmail.com"
 ADMIN_PASS = "Colombia321*"
 
 # ===============================
-# Utilidades de usuarios
+# Modelo de Usuario (SQLAlchemy)
 # ===============================
-def inicializar_usuarios_si_no_existe():
-    if not os.path.exists(os.path.dirname(USERS_PATH)):
-        os.makedirs(os.path.dirname(USERS_PATH), exist_ok=True)
-    if not os.path.exists(USERS_PATH):
-        admin_expire = (datetime.utcnow() + timedelta(days=3650)).strftime("%Y-%m-%d")
-        admin_hashed = generate_password_hash(ADMIN_PASS)
-        data = {
-            ADMIN_USER: {
-                "password": admin_hashed,
-                "is_admin": True,
-                "created": datetime.utcnow().strftime("%Y-%m-%d"),
-                "expires": admin_expire
-            }
-        }
-        with open(USERS_PATH, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(200), nullable=False)
+    created = db.Column(db.Date, default=datetime.utcnow)
+    expires = db.Column(db.Date, nullable=False)
+    is_admin = db.Column(db.Boolean, default=False)
 
-def cargar_usuarios():
-    if not os.path.exists(USERS_PATH):
-        inicializar_usuarios_si_no_existe()
-    try:
-        with open(USERS_PATH, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return {}
-
-def guardar_usuarios(users):
-    with open(USERS_PATH, "w", encoding="utf-8") as f:
-        json.dump(users, f, indent=2)
-
-def crear_usuario(email, password, dias_validez):
-    users = cargar_usuarios()
-    expires = (datetime.utcnow() + timedelta(days=int(dias_validez))).strftime("%Y-%m-%d")
-    users[email] = {
-        "password": generate_password_hash(password),
-        "is_admin": False,
-        "created": datetime.utcnow().strftime("%Y-%m-%d"),
-        "expires": expires
-    }
-    guardar_usuarios(users)
-    return True
-
-def eliminar_usuario(email):
-    users = cargar_usuarios()
-    if email in users:
-        del users[email]
-        guardar_usuarios(users)
-        return True
-    return False
-
-def extender_usuario(email, dias_extra):
-    users = cargar_usuarios()
-    if email in users:
-        try:
-            curr = datetime.strptime(users[email]["expires"], "%Y-%m-%d")
-        except Exception:
-            curr = datetime.utcnow()
-        nuevo = curr + timedelta(days=int(dias_extra))
-        users[email]["expires"] = nuevo.strftime("%Y-%m-%d")
-        guardar_usuarios(users)
-        return True
-    return False
-
-def verificar_usuario(email, password):
-    users = cargar_usuarios()
-    if email not in users:
-        return False, "Usuario no existe"
-    info = users[email]
-    try:
-        exp = datetime.strptime(info.get("expires", "1970-01-01"), "%Y-%m-%d")
-        if datetime.utcnow().date() > exp.date():
-            return False, "⏳ El tiempo de uso de este usuario ha expirado"
-    except Exception:
-        pass
-    if not check_password_hash(info["password"], password):
-        return False, "Contraseña incorrecta"
-    return True, info
+with app.app_context():
+    db.create_all()
+    # Crear admin si no existe
+    admin = User.query.filter_by(email=ADMIN_USER).first()
+    if not admin:
+        admin = User(
+            email=ADMIN_USER,
+            password=generate_password_hash(ADMIN_PASS),
+            created=datetime.utcnow().date(),
+            expires=(datetime.utcnow() + timedelta(days=3650)).date(),
+            is_admin=True
+        )
+        db.session.add(admin)
+        db.session.commit()
 
 # ===============================
 # Funciones base IA
@@ -226,30 +169,6 @@ def predecir_con_neuronal(hist):
         return "clear"
 
 # ===============================
-# Análisis
-# ===============================
-@app.route("/analisis")
-def analisis():
-    global historial
-    if not historial:
-        return jsonify({"resumen": "Sin datos suficientes para análisis."})
-    df = pd.Series(historial[-40:])
-    promedio = df.mean()
-    maximo = df.max()
-    minimo = df.min()
-    mayores_2 = (df > 2.0).mean() * 100
-    tendencia = "🔴 Bajista"
-    if promedio > 2.0 or mayores_2 > 50:
-        tendencia = "🟢 Alcista"
-    resumen = (
-        f"Promedio: {promedio:.2f}\n"
-        f"Máx: {maximo:.2f} | Mín: {minimo:.2f}\n"
-        f"% > 2.00: {mayores_2:.1f}%\n"
-        f"Tendencia general: {tendencia}"
-    )
-    return jsonify({"resumen": resumen})
-
-# ===============================
 # Decoradores de autenticación
 # ===============================
 def login_required(f):
@@ -258,18 +177,10 @@ def login_required(f):
     def decorated(*args, **kwargs):
         if "user" not in session:
             return redirect(url_for("login"))
-        users = cargar_usuarios()
-        info = users.get(session["user"])
-        if not info:
+        user = User.query.filter_by(email=session["user"]).first()
+        if not user or user.expires < datetime.utcnow().date():
             session.clear()
             return redirect(url_for("login"))
-        try:
-            exp = datetime.strptime(info.get("expires","1970-01-01"), "%Y-%m-%d")
-            if datetime.utcnow().date() > exp.date():
-                session.clear()
-                return redirect(url_for("login"))
-        except Exception:
-            pass
         return f(*args, **kwargs)
     return decorated
 
@@ -279,26 +190,26 @@ def admin_required(f):
     def decorated(*args, **kwargs):
         if "user" not in session:
             return redirect(url_for("login"))
-        users = cargar_usuarios()
-        info = users.get(session["user"])
-        if not info or not info.get("is_admin", False):
+        user = User.query.filter_by(email=session["user"]).first()
+        if not user or not user.is_admin:
             return redirect(url_for("index"))
         return f(*args, **kwargs)
     return decorated
 
 # ===============================
-# Rutas Flask
+# Login / Logout
 # ===============================
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    inicializar_usuarios_si_no_existe()
     if request.method == "POST":
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "").strip()
-        ok, info = verificar_usuario(email, password)
-        if not ok:
-            return render_template("login.html", error=info or "Login fallido")
-        session["user"] = email
+        user = User.query.filter_by(email=email).first()
+        if not user or not check_password_hash(user.password, password):
+            return render_template("login.html", error="Credenciales inválidas")
+        if user.expires < datetime.utcnow().date():
+            return render_template("login.html", error="⏳ El tiempo de uso ha expirado")
+        session["user"] = user.email
         return redirect(url_for("index"))
     return render_template("login.html")
 
@@ -307,72 +218,54 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
-@app.route("/admin")
+# ===============================
+# Panel Admin
+# ===============================
+@app.route("/admin", methods=["GET", "POST"])
 @admin_required
 def admin_panel():
-    users = cargar_usuarios()
-    return render_template("admin.html", users=users, admin=session.get("user"))
-
-@app.route("/crear_usuario", methods=["POST"])
-@admin_required
-def crear_usuario_route():
-    try:
-        data = request.get_json(silent=True)
-        if not data:
-            data = request.form or {}
-            if not data and request.data:
-                try:
-                    import urllib.parse
-                    parsed = urllib.parse.parse_qs(request.data.decode())
-                    data = {k: v[0] for k, v in parsed.items()}
-                except Exception:
-                    data = {}
-        email = (data.get("email") or "").strip()
-        password = (data.get("password") or "").strip()
-        dias = data.get("dias") or data.get("dias_validez") or "1"
-        dias = str(dias).strip() if dias is not None else "1"
-        if dias == "":
-            dias = "1"
+    if request.method == "POST":
+        email = request.form.get("email")
+        password = request.form.get("password")
+        dias = int(request.form.get("dias", 1))
         if not email or not password:
-            return jsonify({"error": "Email y contraseña obligatorios"}), 400
-        users = cargar_usuarios()
-        if email in users:
+            return jsonify({"error": "Faltan campos"}), 400
+        if User.query.filter_by(email=email).first():
             return jsonify({"error": "El usuario ya existe"}), 400
-        crear_usuario(email, password, dias)
-        return jsonify({"ok": True})
-    except Exception as e:
-        print("⚠️ Error creando usuario (crear_usuario_route):", e)
-        return jsonify({"error": "Error creando usuario"}), 400
+        nuevo = User(
+            email=email,
+            password=generate_password_hash(password),
+            created=datetime.utcnow().date(),
+            expires=(datetime.utcnow() + timedelta(days=dias)).date(),
+            is_admin=False
+        )
+        db.session.add(nuevo)
+        db.session.commit()
+        return redirect(url_for("admin_panel"))
+    usuarios = User.query.all()
+    return render_template("admin.html", users=usuarios, admin=session.get("user"))
 
-@app.route("/eliminar_usuario", methods=["POST"])
+@app.route("/eliminar_usuario/<int:id>")
 @admin_required
-def eliminar_usuario_route():
-    try:
-        data = request.get_json(silent=True)
-        if not data:
-            data = request.form or {}
-            if not data and request.data:
-                try:
-                    import urllib.parse
-                    parsed = urllib.parse.parse_qs(request.data.decode())
-                    data = {k: v[0] for k, v in parsed.items()}
-                except Exception:
-                    data = {}
-        email = (data.get("email") or "").strip()
-        if not email:
-            return jsonify({"error": "Falta el email"}), 400
-        users = cargar_usuarios()
-        if email not in users:
-            return jsonify({"error": "Usuario no encontrado"}), 400
-        del users[email]
-        guardar_usuarios(users)
-        return jsonify({"ok": True})
-    except Exception as e:
-        print("⚠️ Error eliminando usuario:", e)
-        return jsonify({"error": "Error eliminando usuario"}), 400
+def eliminar_usuario(id):
+    user = User.query.get(id)
+    if user and not user.is_admin:
+        db.session.delete(user)
+        db.session.commit()
+    return redirect(url_for("admin_panel"))
+
+@app.route("/extender_usuario/<int:id>", methods=["POST"])
+@admin_required
+def extender_usuario(id):
+    dias = int(request.form.get("dias", 1))
+    user = User.query.get(id)
+    if user:
+        user.expires += timedelta(days=dias)
+        db.session.commit()
+    return redirect(url_for("admin_panel"))
 
 # ===============================
-# Rutas IA protegidas
+# IA Routes
 # ===============================
 @app.route("/")
 @login_required
@@ -419,9 +312,6 @@ def limpiar_todo():
 # Main
 # ===============================
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()   # ✅ NUEVO: crea las tablas si no existen
-    inicializar_usuarios_si_no_existe()
     cargar_historial()
     cargar_modelo_y_scaler()
     entrenar_en_hilo()
