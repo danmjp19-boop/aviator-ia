@@ -16,8 +16,11 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, s
 # ==============================
 app = Flask(__name__)
 os.makedirs("static", exist_ok=True)
-app.secret_key = os.getenv("SECRET_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9-SUPER-SECRETA-2025-AVIATOR")
 
+# Clave secreta obligatoria
+app.secret_key = os.getenv("SECRET_KEY")
+if not app.secret_key:
+    raise ValueError("SECRET_KEY no está configurada en Render. Ve a Environment y agrégala.")
 
 # ==============================
 # Configuración de usuarios y rutas seguras
