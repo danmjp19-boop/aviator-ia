@@ -1,5 +1,8 @@
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+import pandas as pd
 import os
 import numpy as np
+import threading
 from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Dense
@@ -8,44 +11,36 @@ import joblib
 import json
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session
-from flask_cors import CORS
 
-# ==============================
-# CONFIGURACIÓN BASE
-# ==============================
 app = Flask(__name__)
-CORS(app)
+app.secret_key = "cambia_esta_clave_secreta_por_una_muy_larga"
 
-# Configuración segura para Render
-app.config['PREFERRED_URL_SCHEME'] = 'https'
-app.config['SESSION_COOKIE_SECURE'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+# ===============================
+# Configuración global
+# ===============================
+DATA_PATH = os.path.join("static", "historial.csv")
+MODEL_PATH = os.path.join("static", "modelo_ia.keras")
+SCALER_PATH = os.path.join("static", "scaler.pkl")
+USERS_PATH = os.path.join("static", "usuarios.json")
 
-@app.before_request
-def make_session_permanent():
-    session.permanent = True
+historial = []
+model = None
+scaler = None
+WINDOW = 5
+MIN_SAMPLES = 10
+training_lock = threading.Lock()
 
-os.makedirs("static", exist_ok=True)
+# Admin por defecto
+ADMIN_USER = "danmjp@gmail.com"
+ADMIN_PASS = "Colombia321*"
 
-# Clave secreta requerida (Render → Environment → SECRET_KEY)
-app.secret_key = os.getenv("SECRET_KEY")
-if not app.secret_key:
-    raise ValueError("SECRET_KEY no está configurada en Render. Agrega una en Environment.")
-
-# ==============================
-# CONFIGURACIÓN DE USUARIOS
-# ==============================
-USERS_PATH = "/tmp/usuarios.json"  # Render solo permite escritura en /tmp
-ADMIN_USER = os.getenv("ADMIN_USER", "admin")
-ADMIN_PASS = os.getenv("ADMIN_PASS", "admin123")
-
+# ===============================
+# Utilidades de usuarios
+# ===============================
 def inicializar_usuarios_si_no_existe():
-    """Crea el archivo de usuarios si no existe."""
     if not os.path.exists(os.path.dirname(USERS_PATH)):
         os.makedirs(os.path.dirname(USERS_PATH), exist_ok=True)
     if not os.path.exists(USERS_PATH):
-        print("📁 Creando archivo de usuarios:", USERS_PATH)
         admin_expire = (datetime.utcnow() + timedelta(days=3650)).strftime("%Y-%m-%d")
         admin_hashed = generate_password_hash(ADMIN_PASS)
         data = {
@@ -60,39 +55,243 @@ def inicializar_usuarios_si_no_existe():
             json.dump(data, f, indent=2)
 
 def cargar_usuarios():
-    """Carga el archivo de usuarios."""
     if not os.path.exists(USERS_PATH):
         inicializar_usuarios_si_no_existe()
-    with open(USERS_PATH, "r", encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        with open(USERS_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
 
-def guardar_usuarios(data):
-    """Guarda los usuarios actualizados."""
+def guardar_usuarios(users):
     with open(USERS_PATH, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+        json.dump(users, f, indent=2)
 
-# ==============================
-# LOGIN
-# ==============================
-@app.route("/", methods=["GET", "POST"])
-def login():
-    if request.method == "POST":
-        user = request.form.get("correo")
-        password = request.form.get("contrasena")
+def crear_usuario(email, password, dias_validez):
+    users = cargar_usuarios()
+    expires = (datetime.utcnow() + timedelta(days=int(dias_validez))).strftime("%Y-%m-%d")
+    users[email] = {
+        "password": generate_password_hash(password),
+        "is_admin": False,
+        "created": datetime.utcnow().strftime("%Y-%m-%d"),
+        "expires": expires
+    }
+    guardar_usuarios(users)
+    return True
 
-        if not user or not password:
-            return render_template("login.html", error="Por favor ingresa todos los campos.")
+def eliminar_usuario(email):
+    users = cargar_usuarios()
+    if email in users:
+        del users[email]
+        guardar_usuarios(users)
+        return True
+    return False
 
-        usuarios = cargar_usuarios()
-        if user in usuarios and check_password_hash(usuarios[user]["password"], password):
-            expira = datetime.strptime(usuarios[user]["expires"], "%Y-%m-%d")
-            if expira < datetime.utcnow():
-                return render_template("login.html", error="Cuenta expirada.")
-            session["usuario"] = user
-            session["is_admin"] = usuarios[user].get("is_admin", False)
-            return redirect(url_for("panel"))
+def extender_usuario(email, dias_extra):
+    users = cargar_usuarios()
+    if email in users:
+        try:
+            curr = datetime.strptime(users[email]["expires"], "%Y-%m-%d")
+        except Exception:
+            curr = datetime.utcnow()
+        nuevo = curr + timedelta(days=int(dias_extra))
+        users[email]["expires"] = nuevo.strftime("%Y-%m-%d")
+        guardar_usuarios(users)
+        return True
+    return False
+
+def verificar_usuario(email, password):
+    users = cargar_usuarios()
+    if email not in users:
+        return False, "Usuario no existe"
+    info = users[email]
+    try:
+        exp = datetime.strptime(info.get("expires", "1970-01-01"), "%Y-%m-%d")
+        if datetime.utcnow().date() > exp.date():
+            return False, "⏳ El tiempo de uso de este usuario ha expirado"
+    except Exception:
+        pass
+    if not check_password_hash(info["password"], password):
+        return False, "Contraseña incorrecta"
+    return True, info
+
+# ===============================
+# Funciones base IA
+# ===============================
+def cargar_historial():
+    global historial
+    if os.path.exists(DATA_PATH):
+        df = pd.read_csv(DATA_PATH)
+        if "cuota" in df.columns:
+            historial = df["cuota"].dropna().astype(float).tolist()
         else:
-            return render_template("login.html", error="Credenciales incorrectas.")
+            historial = []
+    else:
+        historial = []
+
+def construir_modelo(input_dim):
+    m = Sequential()
+    m.add(Dense(64, activation="relu", input_shape=(input_dim,)))
+    m.add(Dense(32, activation="relu"))
+    m.add(Dense(16, activation="relu"))
+    m.add(Dense(1, activation="sigmoid"))
+    m.compile(optimizer=Adam(learning_rate=0.001), loss="binary_crossentropy", metrics=["accuracy"])
+    return m
+
+def cargar_modelo_y_scaler():
+    global model, scaler
+    try:
+        if os.path.exists(SCALER_PATH):
+            scaler_local = joblib.load(SCALER_PATH)
+            scaler = scaler_local
+        if os.path.exists(MODEL_PATH):
+            model_local = load_model(MODEL_PATH)
+            if model_local.input_shape[1] != WINDOW:
+                model_local = construir_modelo(WINDOW)
+                scaler_local = MinMaxScaler()
+                model = model_local
+                scaler = scaler_local
+            else:
+                model = model_local
+    except Exception as e:
+        print("⚠️ Error cargando modelo:", e)
+        model = construir_modelo(WINDOW)
+        scaler = MinMaxScaler()
+
+# ===============================
+# Entrenamiento neuronal
+# ===============================
+def entrenar_en_hilo():
+    t = threading.Thread(target=entrenar_neuronal, daemon=True)
+    t.start()
+
+def entrenar_neuronal():
+    global model, scaler
+    with training_lock:
+        if not os.path.exists(DATA_PATH):
+            return
+        try:
+            df = pd.read_csv(DATA_PATH)
+        except Exception as e:
+            print("⚠️ Error leyendo CSV:", e)
+            return
+        if "cuota" not in df.columns or len(df) < MIN_SAMPLES:
+            return
+        cuotas = df["cuota"].astype(float).tolist()
+        X, y = [], []
+        for i in range(WINDOW, len(cuotas)):
+            X.append(cuotas[i - WINDOW:i])
+            y.append(1 if cuotas[i] > 2.0 else 0)
+        X = np.array(X, dtype=float)
+        y = np.array(y, dtype=float)
+        scaler_local = MinMaxScaler()
+        X_scaled = scaler_local.fit_transform(X)
+        if model is None or model.input_shape[1] != X_scaled.shape[1]:
+            model_local = construir_modelo(X_scaled.shape[1])
+        else:
+            model_local = model
+        print("🧠 Entrenando modelo neuronal...")
+        model_local.fit(X_scaled, y, epochs=30, batch_size=16, verbose=0)
+        model_local.save(MODEL_PATH)
+        joblib.dump(scaler_local, SCALER_PATH)
+        model = model_local
+        scaler = scaler_local
+        print("✅ Entrenamiento completado y modelo guardado.")
+
+# ===============================
+# Predicción
+# ===============================
+def predecir_con_neuronal(hist):
+    global model, scaler
+    if model is None or scaler is None or len(hist) < WINDOW:
+        return "clear"
+    ventana = np.array(hist[-WINDOW:], dtype=float).reshape(1, -1)
+    try:
+        ventana_scaled = scaler.transform(ventana)
+        prob = float(model.predict(ventana_scaled, verbose=0)[0][0])
+    except Exception as e:
+        print("⚠️ Error prediciendo:", e)
+        return "clear"
+    if prob > 0.6:
+        return "🟢 Pronóstico: próxima cuota probable mayor a 2.00"
+    else:
+        return "clear"
+
+# ===============================
+# Análisis
+# ===============================
+@app.route("/analisis")
+def analisis():
+    global historial
+    if not historial:
+        return jsonify({"resumen": "Sin datos suficientes para análisis."})
+    df = pd.Series(historial[-40:])
+    promedio = df.mean()
+    maximo = df.max()
+    minimo = df.min()
+    mayores_2 = (df > 2.0).mean() * 100
+    tendencia = "🔴 Bajista"
+    if promedio > 2.0 or mayores_2 > 50:
+        tendencia = "🟢 Alcista"
+    resumen = (
+        f"Promedio: {promedio:.2f}\n"
+        f"Máx: {maximo:.2f} | Mín: {minimo:.2f}\n"
+        f"% > 2.00: {mayores_2:.1f}%\n"
+        f"Tendencia general: {tendencia}"
+    )
+    return jsonify({"resumen": resumen})
+
+# ===============================
+# Decoradores de autenticación
+# ===============================
+def login_required(f):
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if "user" not in session:
+            return redirect(url_for("login"))
+        users = cargar_usuarios()
+        info = users.get(session["user"])
+        if not info:
+            session.clear()
+            return redirect(url_for("login"))
+        try:
+            exp = datetime.strptime(info.get("expires","1970-01-01"), "%Y-%m-%d")
+            if datetime.utcnow().date() > exp.date():
+                session.clear()
+                return redirect(url_for("login"))
+        except Exception:
+            pass
+        return f(*args, **kwargs)
+    return decorated
+
+def admin_required(f):
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if "user" not in session:
+            return redirect(url_for("login"))
+        users = cargar_usuarios()
+        info = users.get(session["user"])
+        if not info or not info.get("is_admin", False):
+            return redirect(url_for("index"))
+        return f(*args, **kwargs)
+    return decorated
+
+# ===============================
+# Rutas Flask
+# ===============================
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    inicializar_usuarios_si_no_existe()
+    if request.method == "POST":
+        email = request.form.get("email", "").strip()
+        password = request.form.get("password", "").strip()
+        ok, info = verificar_usuario(email, password)
+        if not ok:
+            return render_template("login.html", error=info or "Login fallido")
+        session["user"] = email
+        return redirect(url_for("index"))
     return render_template("login.html")
 
 @app.route("/logout")
@@ -100,93 +299,133 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
-# ==============================
-# PANEL PRINCIPAL
-# ==============================
-@app.route("/panel")
-def panel():
-    if "usuario" not in session:
-        return redirect(url_for("login"))
-    return render_template("panel.html", usuario=session["usuario"], is_admin=session.get("is_admin", False))
-
-# ==============================
-# PANEL ADMINISTRADOR
-# ==============================
 @app.route("/admin")
-def admin():
-    if "usuario" not in session or not session.get("is_admin"):
-        return redirect(url_for("login"))
-    usuarios = cargar_usuarios()
-    return render_template("admin.html", usuarios=usuarios)
+@admin_required
+def admin_panel():
+    users = cargar_usuarios()
+    return render_template("admin.html", users=users, admin=session.get("user"))
 
-@app.route("/admin/crear", methods=["POST"])
-def crear_usuario():
-    if "usuario" not in session or not session.get("is_admin"):
-        return redirect(url_for("login"))
-    data = cargar_usuarios()
-    nuevo = request.form["usuario"]
-    password = generate_password_hash(request.form["password"])
-    dias = int(request.form.get("dias", 30))
-    if nuevo in data:
-        return "Usuario ya existe."
-    expire = (datetime.utcnow() + timedelta(days=dias)).strftime("%Y-%m-%d")
-    data[nuevo] = {
-        "password": password,
-        "is_admin": False,
-        "created": datetime.utcnow().strftime("%Y-%m-%d"),
-        "expires": expire
-    }
-    guardar_usuarios(data)
-    return redirect(url_for("admin"))
+@app.route("/crear_usuario", methods=["POST"])
+@admin_required
+def crear_usuario_route():
+    try:
+        # 1) Intentar leer JSON si viene así
+        data = request.get_json(silent=True)
+        # 2) Si no hay JSON, usar form (o request.data en último recurso)
+        if not data:
+            data = request.form or {}
+            if not data and request.data:
+                try:
+                    import urllib.parse
+                    parsed = urllib.parse.parse_qs(request.data.decode())
+                    # parsed values are lists -> convertir a dict simple
+                    data = {k: v[0] for k, v in parsed.items()}
+                except Exception:
+                    data = {}
 
-@app.route("/admin/eliminar/<usuario>")
-def eliminar_usuario(usuario):
-    if "usuario" not in session or not session.get("is_admin"):
-        return redirect(url_for("login"))
-    data = cargar_usuarios()
-    if usuario in data:
-        del data[usuario]
-        guardar_usuarios(data)
-    return redirect(url_for("admin"))
+        # Extraer campos con tolerancia a formatos
+        email = (data.get("email") or "").strip()
+        password = (data.get("password") or "").strip()
+        dias = data.get("dias") or data.get("dias_validez") or "1"
+        dias = str(dias).strip() if dias is not None else "1"
+        if dias == "":
+            dias = "1"
 
-@app.route("/admin/extender/<usuario>", methods=["POST"])
-def extender_usuario(usuario):
-    if "usuario" not in session or not session.get("is_admin"):
-        return redirect(url_for("login"))
-    dias = int(request.form.get("dias", 30))
-    data = cargar_usuarios()
-    if usuario in data:
-        actual = datetime.strptime(data[usuario]["expires"], "%Y-%m-%d")
-        nueva_fecha = (actual + timedelta(days=dias)).strftime("%Y-%m-%d")
-        data[usuario]["expires"] = nueva_fecha
-        guardar_usuarios(data)
-    return redirect(url_for("admin"))
+        # Validaciones
+        if not email or not password:
+            return jsonify({"error": "Email y contraseña obligatorios"}), 400
 
-# ==============================
-# IA / PREDICCIÓN
-# ==============================
-MODEL_PATH = "modelo_entrenado.h5"
-SCALER_PATH = "scaler.save"
+        users = cargar_usuarios()
+        if email in users:
+            return jsonify({"error": "El usuario ya existe"}), 400
 
-def predecir(valor):
-    """Realiza una predicción usando el modelo entrenado."""
-    if not os.path.exists(MODEL_PATH) or not os.path.exists(SCALER_PATH):
-        return "Modelo no entrenado aún."
-    model = load_model(MODEL_PATH)
-    scaler = joblib.load(SCALER_PATH)
-    val = scaler.transform(np.array([[valor]]))
-    pred = model.predict(val, verbose=0)[0][0]
-    return round(pred, 3)
+        # Crear usuario
+        crear_usuario(email, password, dias)
+        return jsonify({"ok": True})
+    except Exception as e:
+        print("⚠️ Error creando usuario (crear_usuario_route):", e)
+        return jsonify({"error": "Error creando usuario"}), 400
+@app.route("/eliminar_usuario", methods=["POST"])
+@admin_required
+def eliminar_usuario_route():
+    try:
+        # 1) Intentar leer JSON si viene así
+        data = request.get_json(silent=True)
+        # 2) Si no hay JSON, usar form (o request.data)
+        if not data:
+            data = request.form or {}
+            if not data and request.data:
+                try:
+                    import urllib.parse
+                    parsed = urllib.parse.parse_qs(request.data.decode())
+                    data = {k: v[0] for k, v in parsed.items()}
+                except Exception:
+                    data = {}
 
-@app.route("/predecir", methods=["POST"])
-def api_predecir():
-    valor = float(request.form["valor"])
-    resultado = predecir(valor)
-    return jsonify({"resultado": resultado})
+        email = (data.get("email") or "").strip()
+        if not email:
+            return jsonify({"error": "Falta el email"}), 400
 
-# ==============================
-# EJECUCIÓN
-# ==============================
+        users = cargar_usuarios()
+        if email not in users:
+            return jsonify({"error": "Usuario no encontrado"}), 400
+
+        del users[email]
+        guardar_usuarios(users)
+        return jsonify({"ok": True})
+    except Exception as e:
+        print("⚠️ Error eliminando usuario:", e)
+        return jsonify({"error": "Error eliminando usuario"}), 400
+# ===============================
+# Rutas IA protegidas
+# ===============================
+@app.route("/")
+@login_required
+def index():
+    cargar_historial()
+    usuario_actual = session.get("user", "Desconocido")
+    return render_template("index.html", historial=historial, usuario=usuario_actual)
+
+@app.route("/guardar", methods=["POST"])
+@login_required
+def guardar():
+    cuota = request.form.get("cuota", "").strip()
+    try:
+        valor = float(cuota)
+    except:
+        return jsonify({"error": "Valor inválido"})
+    historial.append(valor)
+    if len(historial) > 100:
+        historial.pop(0)
+    os.makedirs(os.path.dirname(DATA_PATH), exist_ok=True)
+    pd.DataFrame(historial, columns=["cuota"]).to_csv(DATA_PATH, index=False)
+    entrenar_en_hilo()
+    pred = predecir_con_neuronal(historial)
+    return jsonify({"prediccion": pred if pred else "clear"})
+
+@app.route("/borrar_ultimo", methods=["POST"])
+@login_required
+def borrar_ultimo():
+    if historial:
+        historial.pop()
+        pd.DataFrame(historial, columns=["cuota"]).to_csv(DATA_PATH, index=False)
+        entrenar_en_hilo()
+    return jsonify({"status": "ok"})
+
+@app.route("/limpiar_todo", methods=["POST"])
+@login_required
+def limpiar_todo():
+    global historial
+    historial = []
+    pd.DataFrame(historial, columns=["cuota"]).to_csv(DATA_PATH, index=False)
+    return jsonify({"status": "ok"})
+
+# ===============================
+# Main
+# ===============================
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port, debug=False)
+    inicializar_usuarios_si_no_existe()
+    cargar_historial()
+    cargar_modelo_y_scaler()
+    entrenar_en_hilo()
+    app.run(host="0.0.0.0", port=5000, debug=True)
