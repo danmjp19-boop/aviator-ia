@@ -193,6 +193,5 @@ def api_predecir():
 # Inicialización
 # ==============================
 if __name__ == "__main__":
-    from waitress import serve
-    inicializar_usuarios_si_no_existe()
-    serve(app, host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
+    port = int(os.environ.get("PORT", 10000))  # Render asigna el puerto dinámicamente
+    app.run(host="0.0.0.0", port=port, debug=False)
