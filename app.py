@@ -15,8 +15,9 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, s
 # Configuración base
 # ==============================
 app = Flask(__name__)
+app.config['SESSION_COOKIE_SECURE'] = False
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 os.makedirs("static", exist_ok=True)
-
 # Clave secreta obligatoria
 app.secret_key = os.getenv("SECRET_KEY")
 if not app.secret_key:
