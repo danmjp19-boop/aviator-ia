@@ -15,7 +15,11 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, s
 # Configuración base
 # ==============================
 app = Flask(__name__)
-app.config['SESSION_COOKIE_SECURE'] = False
+from flask_cors import CORS
+CORS(app)
+app.config['SERVER_NAME'] = None
+app.config['PREFERRED_URL_SCHEME'] = 'https'
+app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 os.makedirs("static", exist_ok=True)
 # Clave secreta obligatoria
