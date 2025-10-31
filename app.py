@@ -16,7 +16,8 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, s
 # ==============================
 app = Flask(__name__)
 os.makedirs("static", exist_ok=True)
-app.secret_key = os.getenv("SECRET_KEY", "cambia_esta_clave_secreta_por_una_muy_larga")
+app.secret_key = os.getenv("SECRET_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9-SUPER-SECRETA-2025-AVIATOR")
+
 
 # ==============================
 # Configuración de usuarios y rutas seguras
