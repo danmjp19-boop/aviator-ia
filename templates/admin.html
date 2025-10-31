@@ -30,13 +30,15 @@
 
     <div class="panel">
         <h3>Crear usuario</h3>
-        <label>Correo</label>
-        <input id="email" type="email" placeholder="usuario@ejemplo.com" />
-        <label>Contraseña</label>
-        <input id="password" type="text" placeholder="contraseña" />
-        <label>Días de validez (1-30)</label>
-        <input id="dias" type="number" min="1" max="3650" value="1" />
-        <button onclick="crear()">Crear usuario</button>
+        <form id="formCrear" method="POST" action="{{ url_for('admin_panel') }}">
+            <label>Correo</label>
+            <input name="email" type="email" placeholder="usuario@ejemplo.com" required />
+            <label>Contraseña</label>
+            <input name="password" type="text" placeholder="contraseña" required />
+            <label>Días de validez (1-30)</label>
+            <input name="dias" type="number" min="1" max="3650" value="1" required />
+            <button type="submit">Crear usuario</button>
+        </form>
     </div>
 
     <div class="panel" style="margin-top:12px;">
@@ -44,16 +46,16 @@
         <table>
             <thead><tr><th>Email</th><th>Creado</th><th>Expira</th><th>Admin</th><th>Acciones</th></tr></thead>
             <tbody id="users_table">
-            {% for email, info in users.items() %}
+            {% for u in users %}
                 <tr>
-                    <td>{{ email }}</td>
-                    <td>{{ info.created }}</td>
-                    <td>{{ info.expires }}</td>
-                    <td>{{ 'Sí' if info.is_admin else 'No' }}</td>
+                    <td>{{ u.email }}</td>
+                    <td>{{ u.created }}</td>
+                    <td>{{ u.expires }}</td>
+                    <td>{{ 'Sí' if u.is_admin else 'No' }}</td>
                     <td>
-                        {% if not info.is_admin %}
-                        <button class="danger" onclick="eliminar('{{ email }}')">Eliminar</button>
-                        <button onclick="extenderPrompt('{{ email }}')">Extender</button>
+                        {% if not u.is_admin %}
+                        <button class="danger" onclick="eliminarUsuario({{ u.id }}, '{{ u.email }}')">Eliminar</button>
+                        <button onclick="extenderUsuario({{ u.id }}, '{{ u.email }}')">Extender</button>
                         {% else %}
                         <span class="small">Cuenta admin</span>
                         {% endif %}
@@ -70,47 +72,24 @@
 </div>
 
 <script>
-function crear(){
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value.trim();
-    const dias = document.getElementById("dias").value;
-    if(!email || !password){ alert("Completa email y contraseña"); return; }
-    fetch("/crear_usuario", {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({email,password,dias})
-    })
-    .then(r=>r.json()).then(d=>{
-        if(d.ok) { alert("Usuario creado"); location.reload(); }
-        else alert("Error creando usuario");
-    });
+function eliminarUsuario(id, email){
+    if(!confirm("¿Eliminar usuario " + email + "?")) return;
+    window.location.href = "/eliminar_usuario/" + id;
 }
 
-function eliminar(email){
-    if(!confirm("Eliminar usuario "+email+" ?")) return;
-    fetch("/eliminar_usuario", {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({email})
-    })
-    .then(r=>r.json()).then(d=>{
-        if(d.ok) location.reload();
-        else alert("Error eliminando usuario");
-    });
-}
-
-function extenderPrompt(email){
-    const dias = prompt("¿Cuántos días extender para "+email+"?", "7");
+function extenderUsuario(id, email){
+    const dias = prompt("¿Cuántos días deseas extender para " + email + "?", "7");
     if(!dias) return;
-    fetch("/extender_usuario", {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({email,dias})
-    })
-    .then(r=>r.json()).then(d=>{
-        if(d.ok) location.reload();
-        else alert("Error extendiendo usuario");
-    });
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = "/extender_usuario/" + id;
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = "dias";
+    input.value = dias;
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
 }
 </script>
 </body>
