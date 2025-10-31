@@ -1,6 +1,5 @@
 import os
 import numpy as np
-import threading
 from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Dense
@@ -13,12 +12,12 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, s
 from flask_cors import CORS
 
 # ==============================
-# Configuración base
+# CONFIGURACIÓN BASE
 # ==============================
 app = Flask(__name__)
 CORS(app)
 
-# 🔧 Configuración segura para Render (sin SERVER_NAME)
+# Configuración segura para Render
 app.config['PREFERRED_URL_SCHEME'] = 'https'
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
@@ -29,22 +28,20 @@ def make_session_permanent():
 
 os.makedirs("static", exist_ok=True)
 
-# Clave secreta obligatoria
+# Clave secreta requerida (Render → Environment → SECRET_KEY)
 app.secret_key = os.getenv("SECRET_KEY")
 if not app.secret_key:
-    raise ValueError("SECRET_KEY no está configurada en Render. Ve a Environment y agrégala.")
+    raise ValueError("SECRET_KEY no está configurada en Render. Agrega una en Environment.")
 
 # ==============================
-# Configuración de usuarios y rutas seguras
+# CONFIGURACIÓN DE USUARIOS
 # ==============================
 USERS_PATH = "/tmp/usuarios.json"  # Render solo permite escritura en /tmp
 ADMIN_USER = os.getenv("ADMIN_USER", "admin")
 ADMIN_PASS = os.getenv("ADMIN_PASS", "admin123")
 
-# ==============================
-# Inicialización de usuarios
-# ==============================
 def inicializar_usuarios_si_no_existe():
+    """Crea el archivo de usuarios si no existe."""
     if not os.path.exists(os.path.dirname(USERS_PATH)):
         os.makedirs(os.path.dirname(USERS_PATH), exist_ok=True)
     if not os.path.exists(USERS_PATH):
@@ -63,23 +60,29 @@ def inicializar_usuarios_si_no_existe():
             json.dump(data, f, indent=2)
 
 def cargar_usuarios():
+    """Carga el archivo de usuarios."""
     if not os.path.exists(USERS_PATH):
         inicializar_usuarios_si_no_existe()
     with open(USERS_PATH, "r", encoding="utf-8") as f:
         return json.load(f)
 
 def guardar_usuarios(data):
+    """Guarda los usuarios actualizados."""
     with open(USERS_PATH, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 
 # ==============================
-# Autenticación
+# LOGIN
 # ==============================
 @app.route("/", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        user = request.form["usuario"]
-        password = request.form["password"]
+        user = request.form.get("correo")
+        password = request.form.get("contrasena")
+
+        if not user or not password:
+            return render_template("login.html", error="Por favor ingresa todos los campos.")
+
         usuarios = cargar_usuarios()
         if user in usuarios and check_password_hash(usuarios[user]["password"], password):
             expira = datetime.strptime(usuarios[user]["expires"], "%Y-%m-%d")
@@ -98,7 +101,7 @@ def logout():
     return redirect(url_for("login"))
 
 # ==============================
-# Panel principal
+# PANEL PRINCIPAL
 # ==============================
 @app.route("/panel")
 def panel():
@@ -107,7 +110,7 @@ def panel():
     return render_template("panel.html", usuario=session["usuario"], is_admin=session.get("is_admin", False))
 
 # ==============================
-# Panel de administración
+# PANEL ADMINISTRADOR
 # ==============================
 @app.route("/admin")
 def admin():
@@ -160,28 +163,13 @@ def extender_usuario(usuario):
     return redirect(url_for("admin"))
 
 # ==============================
-# Entrenamiento / Predicción IA
+# IA / PREDICCIÓN
 # ==============================
 MODEL_PATH = "modelo_entrenado.h5"
 SCALER_PATH = "scaler.save"
 
-def entrenar_modelo(datos):
-    X = np.array([d[0] for d in datos]).reshape(-1, 1)
-    y = np.array([d[1] for d in datos])
-    scaler = MinMaxScaler()
-    X_scaled = scaler.fit_transform(X)
-    model = Sequential([
-        Dense(16, input_dim=1, activation="relu"),
-        Dense(8, activation="relu"),
-        Dense(1, activation="sigmoid")
-    ])
-    model.compile(optimizer=Adam(learning_rate=0.001), loss="binary_crossentropy", metrics=["accuracy"])
-    model.fit(X_scaled, y, epochs=10, verbose=0)
-    model.save(MODEL_PATH)
-    joblib.dump(scaler, SCALER_PATH)
-    print("✅ Modelo entrenado y guardado correctamente.")
-
 def predecir(valor):
+    """Realiza una predicción usando el modelo entrenado."""
     if not os.path.exists(MODEL_PATH) or not os.path.exists(SCALER_PATH):
         return "Modelo no entrenado aún."
     model = load_model(MODEL_PATH)
@@ -197,8 +185,8 @@ def api_predecir():
     return jsonify({"resultado": resultado})
 
 # ==============================
-# Inicialización
+# EJECUCIÓN
 # ==============================
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))  # Render asigna el puerto dinámicamente
+    port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False)
