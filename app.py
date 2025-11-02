@@ -15,16 +15,10 @@ from flask_sqlalchemy import SQLAlchemy
 app = Flask(__name__)
 app.secret_key = "cambia_esta_clave_secreta_por_una_muy_larga"
 
-# ===============================
-# 🔗 Configuración base de datos PostgreSQL
-# ===============================
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-# ===============================
-# Configuración global
-# ===============================
 DATA_PATH = os.path.join("static", "historial.csv")
 MODEL_PATH = os.path.join("static", "modelo_ia.keras")
 SCALER_PATH = os.path.join("static", "scaler.pkl")
@@ -36,13 +30,9 @@ WINDOW = 5
 MIN_SAMPLES = 10
 training_lock = threading.Lock()
 
-# Admin por defecto
 ADMIN_USER = "danmjp@gmail.com"
 ADMIN_PASS = "Colombia321*"
 
-# ===============================
-# Modelo de Usuario (SQLAlchemy)
-# ===============================
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -65,9 +55,6 @@ with app.app_context():
         db.session.add(admin)
         db.session.commit()
 
-# ===============================
-# Funciones base IA
-# ===============================
 def cargar_historial():
     global historial
     if os.path.exists(DATA_PATH):
@@ -109,9 +96,6 @@ def cargar_modelo_y_scaler():
         model = construir_modelo(WINDOW)
         scaler = MinMaxScaler()
 
-# ===============================
-# Entrenamiento neuronal
-# ===============================
 def entrenar_en_hilo():
     t = threading.Thread(target=entrenar_neuronal, daemon=True)
     t.start()
@@ -141,17 +125,14 @@ def entrenar_neuronal():
             model_local = construir_modelo(X_scaled.shape[1])
         else:
             model_local = model
-        print("🧠 Entrenando modelo neuronal...")
+        print(f"[IA] Entrenando modelo con {len(X)} muestras...")
         model_local.fit(X_scaled, y, epochs=30, batch_size=16, verbose=0)
         model_local.save(MODEL_PATH)
         joblib.dump(scaler_local, SCALER_PATH)
         model = model_local
         scaler = scaler_local
-        print("✅ Entrenamiento completado y modelo guardado.")
+        print("[IA] Entrenamiento completado y modelo guardado.")
 
-# ===============================
-# Predicción
-# ===============================
 def predecir_con_neuronal(hist):
     global model, scaler
     if model is None or scaler is None or len(hist) < WINDOW:
@@ -160,6 +141,7 @@ def predecir_con_neuronal(hist):
     try:
         ventana_scaled = scaler.transform(ventana)
         prob = float(model.predict(ventana_scaled, verbose=0)[0][0])
+        print(f"[IA] Predicción generada - Probabilidad: {prob:.4f}")
     except Exception as e:
         print("⚠️ Error prediciendo:", e)
         return "clear"
@@ -168,9 +150,6 @@ def predecir_con_neuronal(hist):
     else:
         return "clear"
 
-# ===============================
-# Decoradores de autenticación
-# ===============================
 def login_required(f):
     from functools import wraps
     @wraps(f)
@@ -196,9 +175,6 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
-# ===============================
-# Login / Logout
-# ===============================
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -218,9 +194,6 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
-# ===============================
-# Panel Admin
-# ===============================
 @app.route("/admin", methods=["GET", "POST"])
 @admin_required
 def admin_panel():
@@ -264,9 +237,6 @@ def extender_usuario(id):
         db.session.commit()
     return redirect(url_for("admin_panel"))
 
-# ===============================
-# IA Routes
-# ===============================
 @app.route("/")
 @login_required
 def index():
@@ -287,6 +257,7 @@ def guardar():
         historial.pop(0)
     os.makedirs(os.path.dirname(DATA_PATH), exist_ok=True)
     pd.DataFrame(historial, columns=["cuota"]).to_csv(DATA_PATH, index=False)
+    print(f"[IA] Nueva cuota registrada: {valor}")
     entrenar_en_hilo()
     pred = predecir_con_neuronal(historial)
     return jsonify({"prediccion": pred if pred else "clear"})
@@ -295,8 +266,9 @@ def guardar():
 @login_required
 def borrar_ultimo():
     if historial:
-        historial.pop()
+        eliminado = historial.pop()
         pd.DataFrame(historial, columns=["cuota"]).to_csv(DATA_PATH, index=False)
+        print(f"[IA] Último valor eliminado: {eliminado}")
         entrenar_en_hilo()
     return jsonify({"status": "ok"})
 
@@ -306,18 +278,13 @@ def limpiar_todo():
     global historial
     historial = []
     pd.DataFrame(historial, columns=["cuota"]).to_csv(DATA_PATH, index=False)
+    print("[IA] Historial reiniciado completamente.")
     return jsonify({"status": "ok"})
 
-# ===============================
-# Endpoint para Render
-# ===============================
 @app.route('/ping')
 def ping():
     return "pong", 200
 
-# ===============================
-# Main
-# ===============================
 if __name__ == "__main__":
     cargar_historial()
     cargar_modelo_y_scaler()
