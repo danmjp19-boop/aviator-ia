@@ -108,6 +108,7 @@
         flex-shrink: 0;
         font-weight: bold;
     }
+    /* 🔹 Barra superior de usuario */
     .user-bar {
         margin-bottom: 10px;
         text-align: center;
@@ -131,6 +132,7 @@
 <body>
 <h1>✈️ Aviator Pronosticador IA</h1>
 
+<!-- 🔹 Barra superior con usuario y cerrar sesión -->
 <div class="user-bar">
     <span>📧 {{ usuario }}</span> |
     <a href="/logout">Cerrar sesión</a>
@@ -178,14 +180,18 @@ const horaDiv = document.getElementById("hora");
 
 function actualizarHora() {
     const ahora = new Date();
-    horaDiv.innerText = "🕒 " + ahora.toLocaleTimeString('es-ES', {hour12: false});
+    const horaStr = ahora.toLocaleTimeString('es-ES', {hour12: false});
+    horaDiv.innerText = "🕒 " + horaStr;
 }
 setInterval(actualizarHora, 1000);
 actualizarHora();
 
 function tecla(t) {
-    if (t === "Borrar") display.innerText = display.innerText.slice(0, -1);
-    else display.innerText += t;
+    if (t === "Borrar") {
+        display.innerText = display.innerText.slice(0, -1);
+    } else {
+        display.innerText += t;
+    }
 }
 
 function guardar() {
@@ -224,7 +230,9 @@ function deshacer() {
 }
 
 function limpiarPantalla() {
-    if (!confirm("⚠️ ¿Seguro que deseas borrar el historial visible y reiniciar la pantalla?\nEsto también reiniciará el análisis de la IA.")) return;
+    const confirmar = confirm("⚠️ ¿Seguro que deseas borrar el historial visible y reiniciar la pantalla?\n\nEsto también reiniciará el análisis de la IA.");
+    if (!confirmar) return;
+
     fetch("/limpiar_todo", {method: "POST"})
     .then(r => r.json())
     .then(() => {
@@ -234,7 +242,9 @@ function limpiarPantalla() {
         actualizarAnalisis();
         alert("✅ Pantalla e historial reiniciados correctamente.");
     })
-    .catch(() => alert("⚠️ Error al intentar limpiar el historial."));
+    .catch(() => {
+        alert("⚠️ Error al intentar limpiar el historial.");
+    });
 }
 
 function actualizarAnalisis() {
