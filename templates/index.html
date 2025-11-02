@@ -1,3 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>✈️ Aviator Pronosticador IA</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    body { background:#000; color:cyan; font-family:Arial; text-align:center; margin:0; padding:20px;}
+    .container { max-width:420px; margin:0 auto; background:#111; padding:20px; border-radius:15px; box-shadow:0 0 15px cyan;}
+    #hora { color:#0ff; margin-bottom:10px;}
+    #display { background:#000; color:#0ff; font-size:2em; border:2px solid cyan; border-radius:10px; padding:10px; min-height:40px; margin-bottom:15px;}
+    button { cursor:pointer; }
+    .teclado button { width:30%; margin:5px; padding:10px; font-size:1.2em; border-radius:10px; background:#022; color:cyan; border:1px solid #0ff;}
+    .acciones { display:flex; justify-content:space-between; margin-top:10px; gap:10px;}
+    .acciones button { flex:1; padding:10px; border-radius:10px; background:cyan; color:#000; font-weight:bold;}
+    .limpiar { background:red; color:white; margin-top:15px; width:100%; font-weight:bold; border:2px solid #faa;}
+    #mensaje_ia { margin-top:10px; font-size:1.1em; min-height:1.5em; transition:opacity 0.5s ease;}
+    #historial { margin-top:15px; display:flex; flex-wrap:nowrap; overflow-x:auto; gap:6px; border-top:1px solid cyan; border-bottom:1px solid cyan; padding:5px;}
+    #historial span { background:#033; padding:5px 10px; border-radius:5px; color:#0ff; white-space:nowrap; flex-shrink:0; font-weight:bold;}
+    #grafico { margin-top:15px; background:#000; border:1px solid cyan; border-radius:10px; padding:10px;}
+</style>
+</head>
+<body>
+<h1>✈️ Aviator Pronosticador IA</h1>
+<div class="container">
+    <div id="hora"></div>
+    <div id="display"></div>
+
+    <div class="teclado">
+        {% for n in [1,2,3,4,5,6,7,8,9,'.',0,'Borrar'] %}
+        <button onclick="tecla('{{n}}')">{{n}}</button>
+        {% endfor %}
+    </div>
+
+    <div class="acciones">
+        <button onclick="guardar()">Ingresar</button>
+        <button onclick="deshacer()">↩️ Deshacer</button>
+    </div>
+
+    <button class="limpiar" onclick="limpiarPantalla()">🧹 Limpiar Pantalla</button>
+    <div id="mensaje_ia"></div>
+
+    <canvas id="grafico" height="160"></canvas>
+
+    <h2>Historial</h2>
+    <div id="historial">
+        {% for h in historial %}
+        <span>{{'%.2f'|format(h)}}</span>
+        {% endfor %}
+    </div>
+</div>
+
 <script>
 const display = document.getElementById("display");
 const historialDiv = document.getElementById("historial");
@@ -6,6 +59,7 @@ const horaDiv = document.getElementById("hora");
 const ctx = document.getElementById("grafico").getContext("2d");
 let datos = [];
 
+// === Gráfico configurado para líneas rectas e iguales ===
 const grafico = new Chart(ctx, {
     type: 'line',
     data: {
@@ -17,7 +71,7 @@ const grafico = new Chart(ctx, {
             borderWidth: 2,
             pointRadius: 5,
             pointBackgroundColor: [],
-            tension: 0 // ← rectas sin curvas
+            tension: 0 // ← rectas
         }]
     },
     options: {
@@ -38,16 +92,19 @@ const grafico = new Chart(ctx, {
     }
 });
 
+// Reloj
 function actualizarHora(){
     horaDiv.innerText = "🕒 " + new Date().toLocaleTimeString('es-ES', {hour12:false});
 }
 setInterval(actualizarHora, 1000); actualizarHora();
 
+// Teclado
 function tecla(t){
     if(t === "Borrar") display.innerText = display.innerText.slice(0,-1);
     else display.innerText += t;
 }
 
+// Guardar cuota
 function guardar(){
     const cuota = display.innerText.trim();
     if(!cuota) return;
@@ -66,20 +123,17 @@ function guardar(){
         },300);
 
         const valor = parseFloat(cuota);
-        let nivel = 0;
-        let color = "cyan";
+        const color = valor < 2 ? "blue" : valor < 10 ? "purple" : "pink";
 
-        if (valor >= 1.00 && valor < 2.00) { // Bajista
-            nivel = -1; color = "blue";
-        } else if (valor >= 2.00 && valor < 10.00) { // Alcista
-            nivel = 1; color = "purple";
-        } else if (valor >= 10.00) { // Esporádica
-            nivel = 1; color = "pink";
-        }
+        // Valor normalizado constante: -1 bajista, 0 neutra, 1 alcista
+        let normalizado = 0;
+        if (valor < 2) normalizado = -1;
+        else if (valor < 10) normalizado = 1;
+        else normalizado = 1;
 
-        datos.push(nivel);
+        datos.push(normalizado);
         grafico.data.labels.push(datos.length);
-        grafico.data.datasets[0].data.push(nivel);
+        grafico.data.datasets[0].data.push(normalizado);
         grafico.data.datasets[0].pointBackgroundColor.push(color);
         grafico.update();
 
@@ -90,6 +144,7 @@ function guardar(){
     });
 }
 
+// Deshacer último
 function deshacer(){
     fetch("/borrar_ultimo",{method:"POST"}).then(()=>{
         if(datos.length>0){
@@ -104,6 +159,7 @@ function deshacer(){
     });
 }
 
+// Limpiar todo
 function limpiarPantalla(){
     if(!confirm("⚠️ ¿Seguro que deseas borrar todo y reiniciar?")) return;
     fetch("/limpiar_todo",{method:"POST"})
@@ -120,3 +176,5 @@ function limpiarPantalla(){
     });
 }
 </script>
+</body>
+</html>
