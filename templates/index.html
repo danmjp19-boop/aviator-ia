@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>✈️ Aviator Pronosticador IA</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
     body {
         background-color: #000;
@@ -20,13 +21,12 @@
         background: #111;
         padding: 20px;
         border-radius: 15px;
-        box-shadow: 0 0 15px cyan;
+        box-shadow: 0 0 20px cyan;
     }
     #hora {
         font-size: 1.2em;
         color: #0ff;
         margin-bottom: 10px;
-        letter-spacing: 1px;
     }
     #display {
         background: #000;
@@ -78,17 +78,18 @@
         background: #c00;
         box-shadow: 0 0 10px red;
     }
-    /* 🔹 Historial */
+    #mensaje_ia {
+        margin-top: 15px;
+        font-size: 1.2em;
+        color: lime;
+        min-height: 1.5em;
+    }
     #historial {
         margin-top: 15px;
         display: flex;
-        flex-wrap: nowrap;
         overflow-x: auto;
-        overflow-y: hidden;
         justify-content: flex-start;
         gap: 6px;
-        scrollbar-width: thin;
-        scroll-behavior: smooth;
         padding-bottom: 10px;
         border-top: 1px solid cyan;
         border-bottom: 1px solid cyan;
@@ -98,49 +99,22 @@
         padding: 5px 10px;
         border-radius: 5px;
         color: #0ff;
-        white-space: nowrap;
-        flex-shrink: 0;
         font-weight: bold;
+        white-space: nowrap;
     }
-    /* 🔹 Barra superior de usuario */
     .user-bar {
         margin-bottom: 10px;
         text-align: center;
         font-size: 0.95em;
     }
-    .user-bar span {
-        color: #0ff;
-        font-weight: bold;
-    }
-    .user-bar a {
-        color: #ff5555;
-        text-decoration: none;
-        font-weight: bold;
-        margin-left: 8px;
-    }
-    .user-bar a:hover {
-        text-decoration: underline;
-    }
-    /* 🔹 Sección de gráfico + análisis */
-    #grafico_analisis {
-        position: relative;
-        height: 200px;
-        margin-top: 25px;
-        background: #010b0b;
+    .user-bar span { color: #0ff; font-weight: bold; }
+    .user-bar a { color: #ff5555; text-decoration: none; font-weight: bold; margin-left: 8px; }
+    .user-bar a:hover { text-decoration: underline; }
+    canvas {
+        background: #000;
         border: 1px solid cyan;
         border-radius: 10px;
-        box-shadow: 0 0 15px #0ff4;
-    }
-    #mensaje_ia {
-        position: absolute;
-        bottom: 10px;
-        left: 50%;
-        transform: translateX(-50%);
-        color: lime;
-        font-size: 1.1em;
-        text-shadow: 0 0 8px #0f0;
-        min-width: 90%;
-        text-align: center;
+        margin-top: 10px;
     }
 </style>
 </head>
@@ -177,56 +151,38 @@
     </div>
 
     <h2>📊 Gráfico y Análisis</h2>
-    <div id="grafico_analisis">
-        <canvas id="grafico"></canvas>
-        <div id="mensaje_ia"></div>
-    </div>
+    <canvas id="grafico" height="180"></canvas>
+
+    <div id="mensaje_ia"></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 const display = document.getElementById("display");
 const historialDiv = document.getElementById("historial");
 const mensajeIA = document.getElementById("mensaje_ia");
 const horaDiv = document.getElementById("hora");
-
-let grafico;
 const ctx = document.getElementById("grafico").getContext("2d");
 
-function crearGrafico(datos = []) {
-    if (grafico) grafico.destroy();
-    grafico = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: datos.map((_, i) => i + 1),
-            datasets: [{
-                label: "Tendencia",
-                data: datos,
-                borderColor: 'cyan',
-                borderWidth: 2,
-                tension: 0.3,
-                fill: false,
-                pointBackgroundColor: 'lime'
-            }]
+let grafico = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: [],
+        datasets: [{
+            label: 'Tendencia',
+            data: [],
+            borderColor: 'cyan',
+            backgroundColor: 'rgba(0,255,255,0.3)',
+            tension: 0.3
+        }]
+    },
+    options: {
+        scales: {
+            x: { ticks: { color: '#0ff' }, grid: { color: '#033' } },
+            y: { ticks: { color: '#0ff' }, grid: { color: '#033' } }
         },
-        options: {
-            scales: {
-                x: { ticks: { color: 'cyan' }, grid: { color: '#022' } },
-                y: { ticks: { color: 'cyan' }, grid: { color: '#022' } }
-            },
-            plugins: { legend: { labels: { color: 'cyan' } } }
-        }
-    });
-}
-
-function actualizarGrafico() {
-    fetch("/analisis")
-    .then(r => r.json())
-    .then(d => {
-        crearGrafico(d.valores || []);
-        mensajeIA.innerText = d.resumen || "";
-    });
-}
+        plugins: { legend: { labels: { color: '#0ff' } } }
+    }
+});
 
 function actualizarHora() {
     const ahora = new Date();
@@ -251,17 +207,32 @@ function guardar() {
     })
     .then(r => r.json())
     .then(d => {
-        if (d.error) alert(d.error);
-        else {
-            display.innerText = "";
-            const span = document.createElement("span");
-            span.innerText = parseFloat(cuota).toFixed(2);
-            historialDiv.appendChild(span);
-            if (historialDiv.children.length > 100) historialDiv.removeChild(historialDiv.children[0]);
-            historialDiv.scrollLeft = historialDiv.scrollWidth;
-            mensajeIA.innerText = d.prediccion || "";
-            actualizarGrafico();
-        }
+        if (d.error) return alert(d.error);
+
+        display.innerText = "";
+        mensajeIA.innerText = d.prediccion || "";
+        agregarHistorial(parseFloat(cuota));
+        actualizarGrafico();
+    });
+}
+
+function agregarHistorial(valor) {
+    const span = document.createElement("span");
+    span.innerText = valor.toFixed(2);
+    historialDiv.appendChild(span);
+    if (historialDiv.children.length > 100) historialDiv.removeChild(historialDiv.children[0]);
+    historialDiv.scrollLeft = historialDiv.scrollWidth;
+}
+
+function actualizarGrafico() {
+    fetch("/analisis")
+    .then(r => r.json())
+    .then(d => {
+        if (!d.valores) return;
+        grafico.data.labels = d.valores.map((_, i) => i + 1);
+        grafico.data.datasets[0].data = d.valores;
+        grafico.update();
+        mensajeIA.innerText = d.prediccion || "";
     });
 }
 
@@ -270,22 +241,21 @@ function deshacer() {
     .then(() => {
         if (historialDiv.children.length > 0)
             historialDiv.removeChild(historialDiv.lastChild);
-        mensajeIA.innerText = "";
         actualizarGrafico();
     });
 }
 
 function limpiarPantalla() {
-    const confirmar = confirm("⚠️ ¿Seguro que deseas borrar el historial visible y reiniciar?");
-    if (!confirmar) return;
-
+    if (!confirm("⚠️ ¿Seguro que deseas borrar todo el historial y reiniciar el análisis?")) return;
     fetch("/limpiar_todo", {method: "POST"})
     .then(() => {
         historialDiv.innerHTML = "";
         mensajeIA.innerText = "";
         display.innerText = "";
-        crearGrafico([]);
-        alert("✅ Pantalla e historial reiniciados.");
+        grafico.data.labels = [];
+        grafico.data.datasets[0].data = [];
+        grafico.update();
+        alert("✅ Pantalla e historial reiniciados correctamente.");
     });
 }
 
