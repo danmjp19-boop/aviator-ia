@@ -16,17 +16,18 @@
     }
     h1 { color: #00ffff; }
     .container {
-        max-width: 400px;
+        max-width: 420px;
         margin: 0 auto;
         background: #111;
         padding: 20px;
         border-radius: 15px;
-        box-shadow: 0 0 20px cyan;
+        box-shadow: 0 0 15px cyan;
     }
     #hora {
         font-size: 1.2em;
         color: #0ff;
         margin-bottom: 10px;
+        letter-spacing: 1px;
     }
     #display {
         background: #000;
@@ -87,9 +88,12 @@
     #historial {
         margin-top: 15px;
         display: flex;
+        flex-wrap: nowrap;
         overflow-x: auto;
         justify-content: flex-start;
         gap: 6px;
+        scrollbar-width: thin;
+        scroll-behavior: smooth;
         padding-bottom: 10px;
         border-top: 1px solid cyan;
         border-bottom: 1px solid cyan;
@@ -99,8 +103,9 @@
         padding: 5px 10px;
         border-radius: 5px;
         color: #0ff;
-        font-weight: bold;
         white-space: nowrap;
+        flex-shrink: 0;
+        font-weight: bold;
     }
     .user-bar {
         margin-bottom: 10px;
@@ -108,13 +113,19 @@
         font-size: 0.95em;
     }
     .user-bar span { color: #0ff; font-weight: bold; }
-    .user-bar a { color: #ff5555; text-decoration: none; font-weight: bold; margin-left: 8px; }
+    .user-bar a {
+        color: #ff5555;
+        text-decoration: none;
+        font-weight: bold;
+        margin-left: 8px;
+    }
     .user-bar a:hover { text-decoration: underline; }
-    canvas {
+    #grafico {
+        margin-top: 15px;
         background: #000;
         border: 1px solid cyan;
         border-radius: 10px;
-        margin-top: 10px;
+        padding: 10px;
     }
 </style>
 </head>
@@ -143,6 +154,10 @@
 
     <button class="limpiar" onclick="limpiarPantalla()">🧹 Limpiar Pantalla</button>
 
+    <div id="mensaje_ia"></div>
+
+    <canvas id="grafico" height="150"></canvas>
+
     <h2>Historial</h2>
     <div id="historial">
         {% for h in historial %}
@@ -150,10 +165,12 @@
         {% endfor %}
     </div>
 
-    <h2>📊 Gráfico y Análisis</h2>
-    <canvas id="grafico" height="180"></canvas>
-
-    <div id="mensaje_ia"></div>
+    <h2>Análisis 📊</h2>
+    <div id="resumen_analitico"
+         style="background:#011; color:#0ff; border:1px solid cyan; border-radius:10px;
+                padding:10px; font-size:1em; margin-top:10px; text-align:left; white-space:pre-line;">
+        Cargando análisis...
+    </div>
 </div>
 
 <script>
@@ -163,7 +180,9 @@ const mensajeIA = document.getElementById("mensaje_ia");
 const horaDiv = document.getElementById("hora");
 const ctx = document.getElementById("grafico").getContext("2d");
 
-let grafico = new Chart(ctx, {
+let datos = [];
+
+const grafico = new Chart(ctx, {
     type: 'line',
     data: {
         labels: [],
@@ -171,22 +190,24 @@ let grafico = new Chart(ctx, {
             label: 'Tendencia',
             data: [],
             borderColor: 'cyan',
-            backgroundColor: 'rgba(0,255,255,0.3)',
+            borderWidth: 2,
+            pointRadius: 5,
+            pointBackgroundColor: [],
             tension: 0.3
         }]
     },
     options: {
+        responsive: true,
         scales: {
-            x: { ticks: { color: '#0ff' }, grid: { color: '#033' } },
-            y: { ticks: { color: '#0ff' }, grid: { color: '#033' } }
+            x: { ticks: { color: 'cyan' } },
+            y: { ticks: { color: 'cyan' }, beginAtZero: true }
         },
-        plugins: { legend: { labels: { color: '#0ff' } } }
+        plugins: { legend: { labels: { color: 'cyan' } } }
     }
 });
 
 function actualizarHora() {
-    const ahora = new Date();
-    horaDiv.innerText = "🕒 " + ahora.toLocaleTimeString('es-ES', {hour12: false});
+    horaDiv.innerText = "🕒 " + new Date().toLocaleTimeString('es-ES', {hour12:false});
 }
 setInterval(actualizarHora, 1000);
 actualizarHora();
@@ -207,60 +228,77 @@ function guardar() {
     })
     .then(r => r.json())
     .then(d => {
-        if (d.error) return alert(d.error);
+        if (!d.error) {
+            display.innerText = "";
+            mensajeIA.innerText = (d.prediccion && d.prediccion !== "clear") ? d.prediccion : "";
 
-        display.innerText = "";
-        mensajeIA.innerText = d.prediccion || "";
-        agregarHistorial(parseFloat(cuota));
-        actualizarGrafico();
-    });
-}
+            const valor = parseFloat(cuota);
+            const color = valor < 2 ? "blue" : valor < 10 ? "purple" : "pink";
 
-function agregarHistorial(valor) {
-    const span = document.createElement("span");
-    span.innerText = valor.toFixed(2);
-    historialDiv.appendChild(span);
-    if (historialDiv.children.length > 100) historialDiv.removeChild(historialDiv.children[0]);
-    historialDiv.scrollLeft = historialDiv.scrollWidth;
-}
+            datos.push(valor);
+            grafico.data.labels.push(datos.length);
+            grafico.data.datasets[0].data.push(valor);
+            grafico.data.datasets[0].pointBackgroundColor.push(color);
+            grafico.update();
 
-function actualizarGrafico() {
-    fetch("/analisis")
-    .then(r => r.json())
-    .then(d => {
-        if (!d.valores) return;
-        grafico.data.labels = d.valores.map((_, i) => i + 1);
-        grafico.data.datasets[0].data = d.valores;
-        grafico.update();
-        mensajeIA.innerText = d.prediccion || "";
+            const span = document.createElement("span");
+            span.innerText = valor.toFixed(2);
+            historialDiv.appendChild(span);
+            historialDiv.scrollLeft = historialDiv.scrollWidth;
+        }
+        actualizarAnalisis();
     });
 }
 
 function deshacer() {
     fetch("/borrar_ultimo", {method: "POST"})
     .then(() => {
+        if (datos.length > 0) {
+            datos.pop();
+            grafico.data.labels.pop();
+            grafico.data.datasets[0].data.pop();
+            grafico.data.datasets[0].pointBackgroundColor.pop();
+            grafico.update();
+        }
         if (historialDiv.children.length > 0)
             historialDiv.removeChild(historialDiv.lastChild);
-        actualizarGrafico();
+        mensajeIA.innerText = "";
+        actualizarAnalisis();
     });
 }
 
 function limpiarPantalla() {
-    if (!confirm("⚠️ ¿Seguro que deseas borrar todo el historial y reiniciar el análisis?")) return;
+    if (!confirm("⚠️ ¿Seguro que deseas borrar todo y reiniciar la pantalla?")) return;
+
     fetch("/limpiar_todo", {method: "POST"})
+    .then(r => r.json())
     .then(() => {
         historialDiv.innerHTML = "";
         mensajeIA.innerText = "";
         display.innerText = "";
+        datos = [];
         grafico.data.labels = [];
         grafico.data.datasets[0].data = [];
+        grafico.data.datasets[0].pointBackgroundColor = [];
         grafico.update();
+        actualizarAnalisis();
         alert("✅ Pantalla e historial reiniciados correctamente.");
     });
 }
 
-actualizarGrafico();
-setInterval(actualizarGrafico, 5000);
+function actualizarAnalisis() {
+    fetch("/analisis")
+    .then(r => r.json())
+    .then(d => {
+        document.getElementById("resumen_analitico").innerText = d.resumen;
+    })
+    .catch(() => {
+        document.getElementById("resumen_analitico").innerText = "Error al obtener análisis.";
+    });
+}
+
+actualizarAnalisis();
+setInterval(actualizarAnalisis, 5000);
 </script>
 </body>
 </html>
