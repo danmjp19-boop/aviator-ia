@@ -281,6 +281,20 @@ def limpiar_todo():
     print("[IA] Historial reiniciado completamente.")
     return jsonify({"status": "ok"})
 
+# 🔹 NUEVO: Endpoint de análisis (para index.html)
+@app.route("/analisis")
+@login_required
+def analisis():
+    if not historial:
+        return jsonify({"resumen": "No hay datos para analizar."})
+    datos = np.array(historial, dtype=float)
+    promedio = np.mean(datos)
+    maximo = np.max(datos)
+    minimo = np.min(datos)
+    tendencia = "⬆️ Alza" if datos[-1] > promedio else "⬇️ Baja"
+    resumen = f"Promedio: {promedio:.2f}\nMáximo: {maximo:.2f}\nMínimo: {minimo:.2f}\nTendencia actual: {tendencia}"
+    return jsonify({"resumen": resumen})
+
 @app.route('/ping')
 def ping():
     return "pong", 200
