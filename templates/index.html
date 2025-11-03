@@ -25,6 +25,7 @@ h1 { color:#00ffff; }
 .limpiar { background:#f00; color:white; margin-top:20px; width:100%; font-weight:bold; border:2px solid #faa; transition:all 0.2s ease; }
 .limpiar:hover { background:#c00; box-shadow:0 0 10px red; }
 #mensaje_ia { margin-top:15px; font-size:1.2em; color:lime; min-height:1.5em; transition:opacity .3s ease; }
+#grafico { background:#000; border:2px solid cyan; border-radius:10px; margin-top:15px; height:180px; width:100%; }
 #historial { margin-top:15px; display:flex; flex-wrap:nowrap; overflow-x:auto; overflow-y:hidden; justify-content:flex-start; gap:6px; scrollbar-width:thin; scroll-behavior:smooth; padding-bottom:10px; border-top:1px solid cyan; border-bottom:1px solid cyan; width:100%; }
 #historial span { background:#033; padding:5px 10px; border-radius:5px; color:#0ff; white-space:nowrap; flex-shrink:0; font-weight:bold; }
 .user-bar { margin-bottom:10px; text-align:center; font-size:0.95em; }
@@ -66,7 +67,9 @@ h1 { color:#00ffff; }
   <button class="limpiar" onclick="limpiarPantalla()">🧹 Limpiar Pantalla</button>
 
   <div id="mensaje_ia"></div>
-  <canvas id="grafico" style="background:#000;border:2px solid cyan;border-radius:10px;margin-top:15px;" height="180"></canvas>
+  <div style="width:100%; overflow-x:auto;">
+    <canvas id="grafico"></canvas>
+  </div>
 </div>
 
 <h2>Historial</h2>
@@ -88,6 +91,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   const btn=document.getElementById("analizarBtn");
 
   let tiempoObjetivo=null;
+  let usuarioMoviendoGrafico=false;
 
   let grafico=new Chart(ctx,{
     type:"line",
@@ -97,7 +101,7 @@ document.addEventListener("DOMContentLoaded",()=>{
       plugins:{legend:{display:false}},
       scales:{
         x:{ticks:{color:"cyan"},grid:{color:"#222"}},
-        y:{min:-5,max:5,ticks:{color:"cyan"},grid:{color:"#222"}}
+        y:{ticks:{color:"cyan"},grid:{color:"#222"}}
       }
     }
   });
@@ -125,7 +129,6 @@ document.addEventListener("DOMContentLoaded",()=>{
       span.innerText=cuota.toFixed(2);
       span.style.color=colorPorCuota(cuota);
       historialDiv.appendChild(span);
-      if(historialDiv.children.length>100)historialDiv.removeChild(historialDiv.children[0]);
       historialDiv.scrollLeft=historialDiv.scrollWidth;
       actualizarGrafico();
     });
@@ -156,7 +159,20 @@ document.addEventListener("DOMContentLoaded",()=>{
     grafico.data.datasets[0].borderColor=cuotas.map(c=>colorPorCuota(c));
     grafico.data.datasets[0].pointBackgroundColor=cuotas.map(c=>colorPorCuota(c));
     grafico.update();
+
+    if(!usuarioMoviendoGrafico){
+      const chartArea=ctx.canvas.parentNode;
+      chartArea.scrollLeft=chartArea.scrollWidth;
+    }
   }
+
+  const chartArea=ctx.canvas.parentNode;
+  chartArea.style.overflowX="auto";
+  chartArea.addEventListener("mousedown",()=>usuarioMoviendoGrafico=true);
+  chartArea.addEventListener("mouseup",()=>{
+    usuarioMoviendoGrafico=false;
+    chartArea.scrollLeft=chartArea.scrollWidth;
+  });
 
   function analizarEntrada(){
     const texto=input.value.trim();
