@@ -36,11 +36,8 @@ scaler = None
 WINDOW = 5
 MIN_SAMPLES = 10
 training_lock = threading.Lock()
-
-# Nueva variable para monitoreo de cuotas altas
 cuotas_altas = {}
 
-# Admin por defecto
 ADMIN_USER = "danmjp@gmail.com"
 ADMIN_PASS = "Colombia321*"
 
@@ -54,6 +51,7 @@ class User(db.Model):
     created = db.Column(db.Date, default=datetime.utcnow)
     expires = db.Column(db.Date, nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
+    is_logged_in = db.Column(db.Boolean, default=False)  # 🔹 nuevo campo
 
 with app.app_context():
     db.create_all()
@@ -154,7 +152,7 @@ def entrenar_neuronal():
         print("✅ Entrenamiento completado y modelo guardado.")
 
 # ===============================
-# Predicción normal
+# Predicción
 # ===============================
 def predecir_con_neuronal(hist):
     global model, scaler
@@ -164,32 +162,52 @@ def predecir_con_neuronal(hist):
     try:
         ventana_scaled = scaler.transform(ventana)
         prob = float(model.predict(ventana_scaled, verbose=0)[0][0])
-    except Exception as e:
-        print("⚠️ Error prediciendo:", e)
+    except:
         return "clear"
     if prob > 0.6:
         return "🟢 Pronóstico: próxima cuota probable mayor a 2.00"
-    else:
-        return "clear"
+    return "clear"
 
 # ===============================
-# 🔔 Análisis adicional: cuotas > 8.00
+# Login / Logout con control único
 # ===============================
-def analizar_cuotas_altas():
-    global cuotas_altas
-    ahora = datetime.now()
-    for tiempo, valor in list(cuotas_altas.items()):
-        if ahora >= tiempo + timedelta(minutes=4) and ahora <= tiempo + timedelta(minutes=7):
-            pred = predecir_con_neuronal(historial)
-            if pred != "clear":
-                print("🟢 Pronóstico: próxima cuota probable mayor a 2.00 (por cuota alta detectada)")
-                del cuotas_altas[tiempo]
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip()
+        password = request.form.get("password", "").strip()
+        user = User.query.filter_by(email=email).first()
+
+        if not user or not check_password_hash(user.password, password):
+            return render_template("login.html", error="Credenciales inválidas")
+        if user.expires < datetime.utcnow().date():
+            return render_template("login.html", error="⏳ El tiempo de uso ha expirado")
+        if user.is_logged_in:
+            return render_template("login.html", error="⚠️ Este usuario ya tiene una sesión activa")
+
+        user.is_logged_in = True
+        db.session.commit()
+        session["user"] = user.email
+        return redirect(url_for("index"))
+    return render_template("login.html")
+
+@app.route("/logout")
+def logout():
+    user_email = session.get("user")
+    if user_email:
+        user = User.query.filter_by(email=user_email).first()
+        if user:
+            user.is_logged_in = False
+            db.session.commit()
+    session.clear()
+    return redirect(url_for("login"))
 
 # ===============================
-# Decoradores de autenticación
+# Decoradores
 # ===============================
+from functools import wraps
+
 def login_required(f):
-    from functools import wraps
     @wraps(f)
     def decorated(*args, **kwargs):
         if "user" not in session:
@@ -202,7 +220,6 @@ def login_required(f):
     return decorated
 
 def admin_required(f):
-    from functools import wraps
     @wraps(f)
     def decorated(*args, **kwargs):
         if "user" not in session:
@@ -212,28 +229,6 @@ def admin_required(f):
             return redirect(url_for("index"))
         return f(*args, **kwargs)
     return decorated
-
-# ===============================
-# Login / Logout
-# ===============================
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    if request.method == "POST":
-        email = request.form.get("email", "").strip()
-        password = request.form.get("password", "").strip()
-        user = User.query.filter_by(email=email).first()
-        if not user or not check_password_hash(user.password, password):
-            return render_template("login.html", error="Credenciales inválidas")
-        if user.expires < datetime.utcnow().date():
-            return render_template("login.html", error="⏳ El tiempo de uso ha expirado")
-        session["user"] = user.email
-        return redirect(url_for("index"))
-    return render_template("login.html")
-
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect(url_for("login"))
 
 # ===============================
 # Panel Admin
@@ -253,8 +248,7 @@ def admin_panel():
             email=email,
             password=generate_password_hash(password),
             created=datetime.utcnow().date(),
-            expires=(datetime.utcnow() + timedelta(days=dias)).date(),
-            is_admin=False
+            expires=(datetime.utcnow() + timedelta(days=dias)).date()
         )
         db.session.add(nuevo)
         db.session.commit()
@@ -282,7 +276,7 @@ def extender_usuario(id):
     return redirect(url_for("admin_panel"))
 
 # ===============================
-# IA Routes
+# Rutas IA
 # ===============================
 @app.route("/")
 @login_required
@@ -302,15 +296,11 @@ def guardar():
     historial.append(valor)
     if len(historial) > 100:
         historial.pop(0)
-
-    # Guardar hora si cuota > 8.00
     if valor >= 8.00:
         cuotas_altas[datetime.now()] = valor
-
     os.makedirs(os.path.dirname(DATA_PATH), exist_ok=True)
     pd.DataFrame(historial, columns=["cuota"]).to_csv(DATA_PATH, index=False)
     entrenar_en_hilo()
-    analizar_cuotas_altas()
     pred = predecir_con_neuronal(historial)
     return jsonify({"prediccion": pred if pred else "clear"})
 
