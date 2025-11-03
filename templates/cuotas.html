@@ -51,16 +51,17 @@
 
     <div id="mensaje_ia"></div>
 
-    <!-- Gráfico -->
+    <!-- Gráfico primero -->
     <canvas id="grafico" style="background:#000;border:2px solid cyan;border-radius:10px;margin-top:15px;" height="180"></canvas>
 
-    <!-- Historial abajo -->
-    <h2>Historial</h2>
-    <div id="historial">
-        {% for h in historial %}
-            <span>{{'%.2f'|format(h)}}</span>
-        {% endfor %}
-    </div>
+</div>
+
+<!-- Historial completamente abajo -->
+<h2>Historial</h2>
+<div id="historial">
+    {% for h in historial %}
+        <span>{{'%.2f'|format(h)}}</span>
+    {% endfor %}
 </div>
 
 <!-- Chart.js CDN -->
@@ -81,12 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
             plugins: { legend: { display: false } },
             scales: {
                 x: { ticks: { color: "cyan" }, grid: { color: "#222" } },
-                y: {
-                    min: -5, max: 5,
-                    ticks: { color: "cyan" },
-                    grid: { color: "#222" },
-                    zeroLineColor: "white"
-                }
+                y: { min: -5, max: 5, ticks: { color: "cyan" }, grid: { color: "#222" } }
             }
         }
     });
