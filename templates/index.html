@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title✈️ Aviator Pronosticador IA</title>
+<title>✈️ Aviator Pronosticador IA</title>
 <style>
     body { background-color: #000; color: cyan; font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 20px; }
     h1 { color: #00ffff; }
@@ -51,12 +51,10 @@
 
     <div id="mensaje_ia"></div>
 
-    <!-- Gráfico primero -->
     <canvas id="grafico" style="background:#000;border:2px solid cyan;border-radius:10px;margin-top:15px;" height="180"></canvas>
 
 </div>
 
-<!-- Historial completamente abajo -->
 <h2>Historial</h2>
 <div id="historial">
     {% for h in historial %}
@@ -64,7 +62,6 @@
     {% endfor %}
 </div>
 
-<!-- Chart.js CDN -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
@@ -95,6 +92,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function _tecla(t){ if(t==="Borrar")display.innerText=display.innerText.slice(0,-1); else display.innerText+=t; }
 
+    function colorPorCuota(cuota) {
+        if (cuota < 2) return "blue";
+        if (cuota < 10) return "purple";
+        return "pink";
+    }
+
     function _guardar(){
         const cuota=parseFloat(display.innerText.trim());
         if(isNaN(cuota))return;
@@ -105,6 +108,7 @@ document.addEventListener("DOMContentLoaded", () => {
             mensajeIA.innerText=(d.prediccion&&d.prediccion!=="clear")?d.prediccion:"";
             const span=document.createElement("span");
             span.innerText=cuota.toFixed(2);
+            span.style.color=colorPorCuota(cuota);
             historialDiv.appendChild(span);
             if(historialDiv.children.length>100)historialDiv.removeChild(historialDiv.children[0]);
             historialDiv.scrollLeft=historialDiv.scrollWidth;
@@ -122,8 +126,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function actualizarGrafico(){
-        let cuotas=Array.from(historialDiv.children).map(s=>parseFloat(s.innerText));
-        if(cuotas.length>30) cuotas=cuotas.slice(-30); // 🔹 límite máximo 30 puntos
+        const cuotas=Array.from(historialDiv.children).map(s=>parseFloat(s.innerText));
         let data=[]; let valor=0;
         cuotas.forEach(c=>{
             if(c<2)valor-=1; else valor+=1;
@@ -131,8 +134,8 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         grafico.data.labels=data.map((_,i)=>i+1);
         grafico.data.datasets[0].data=data;
-        grafico.data.datasets[0].borderColor=data.map((v,i)=>cuotas[i]<2?"cyan":"magenta");
-        grafico.data.datasets[0].pointBackgroundColor=data.map((v,i)=>cuotas[i]<2?"cyan":"magenta");
+        grafico.data.datasets[0].borderColor=cuotas.map(c=>colorPorCuota(c));
+        grafico.data.datasets[0].pointBackgroundColor=cuotas.map(c=>colorPorCuota(c));
         grafico.update();
     }
 
