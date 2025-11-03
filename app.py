@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session 
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session  
 import pandas as pd
 import os
 import numpy as np
@@ -37,10 +37,8 @@ WINDOW = 5
 MIN_SAMPLES = 10
 training_lock = threading.Lock()
 
-# Nueva variable para monitoreo de cuotas altas
 cuotas_altas = {}
 
-# Admin por defecto
 ADMIN_USER = "danmjp@gmail.com"
 ADMIN_PASS = "Colombia321*"
 
@@ -54,6 +52,7 @@ class User(db.Model):
     created = db.Column(db.Date, default=datetime.utcnow)
     expires = db.Column(db.Date, nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
+    is_logged_in = db.Column(db.Boolean, default=False)  # 👈 Nueva columna
 
 with app.app_context():
     db.create_all()
@@ -68,122 +67,6 @@ with app.app_context():
         )
         db.session.add(admin)
         db.session.commit()
-
-# ===============================
-# Funciones base IA
-# ===============================
-def cargar_historial():
-    global historial
-    if os.path.exists(DATA_PATH):
-        df = pd.read_csv(DATA_PATH)
-        if "cuota" in df.columns:
-            historial = df["cuota"].dropna().astype(float).tolist()
-        else:
-            historial = []
-    else:
-        historial = []
-
-def construir_modelo(input_dim):
-    m = Sequential()
-    m.add(Dense(64, activation="relu", input_shape=(input_dim,)))
-    m.add(Dense(32, activation="relu"))
-    m.add(Dense(16, activation="relu"))
-    m.add(Dense(1, activation="sigmoid"))
-    m.compile(optimizer=Adam(learning_rate=0.001), loss="binary_crossentropy", metrics=["accuracy"])
-    return m
-
-def cargar_modelo_y_scaler():
-    global model, scaler
-    try:
-        if os.path.exists(SCALER_PATH):
-            scaler_local = joblib.load(SCALER_PATH)
-            scaler = scaler_local
-        if os.path.exists(MODEL_PATH):
-            model_local = load_model(MODEL_PATH)
-            if model_local.input_shape[1] != WINDOW:
-                model_local = construir_modelo(WINDOW)
-                scaler_local = MinMaxScaler()
-            model = model_local
-            scaler = scaler_local
-        else:
-            model = construir_modelo(WINDOW)
-            scaler = MinMaxScaler()
-    except Exception as e:
-        print("⚠️ Error cargando modelo:", e)
-        model = construir_modelo(WINDOW)
-        scaler = MinMaxScaler()
-
-# ===============================
-# Entrenamiento neuronal
-# ===============================
-def entrenar_en_hilo():
-    t = threading.Thread(target=entrenar_neuronal, daemon=True)
-    t.start()
-
-def entrenar_neuronal():
-    global model, scaler
-    with training_lock:
-        if not os.path.exists(DATA_PATH):
-            return
-        try:
-            df = pd.read_csv(DATA_PATH)
-        except Exception as e:
-            print("⚠️ Error leyendo CSV:", e)
-            return
-        if "cuota" not in df.columns or len(df) < MIN_SAMPLES:
-            return
-        cuotas = df["cuota"].astype(float).tolist()
-        X, y = [], []
-        for i in range(WINDOW, len(cuotas)):
-            X.append(cuotas[i - WINDOW:i])
-            y.append(1 if cuotas[i] > 2.0 else 0)
-        X = np.array(X, dtype=float)
-        y = np.array(y, dtype=float)
-        scaler_local = MinMaxScaler()
-        X_scaled = scaler_local.fit_transform(X)
-        if model is None or model.input_shape[1] != X_scaled.shape[1]:
-            model_local = construir_modelo(X_scaled.shape[1])
-        else:
-            model_local = model
-        print("🧠 Entrenando modelo neuronal...")
-        model_local.fit(X_scaled, y, epochs=30, batch_size=16, verbose=0)
-        model_local.save(MODEL_PATH)
-        joblib.dump(scaler_local, SCALER_PATH)
-        model = model_local
-        scaler = scaler_local
-        print("✅ Entrenamiento completado y modelo guardado.")
-
-# ===============================
-# Predicción normal
-# ===============================
-def predecir_con_neuronal(hist):
-    global model, scaler
-    if model is None or scaler is None or len(hist) < WINDOW:
-        return "clear"
-    ventana = np.array(hist[-WINDOW:], dtype=float).reshape(1, -1)
-    try:
-        ventana_scaled = scaler.transform(ventana)
-        prob = float(model.predict(ventana_scaled, verbose=0)[0][0])
-    except Exception as e:
-        print("⚠️ Error prediciendo:", e)
-        return "clear"
-    if prob > 0.6:
-        return "🟢 Pronóstico: próxima cuota probable mayor a 2.00"
-    else:
-        return "clear"
-
-# ===============================
-# 🔔 Análisis adicional: cuotas > 8.00
-# ===============================
-def analizar_cuotas_altas():
-    global cuotas_altas
-    ahora = datetime.now()
-    for tiempo, valor in list(cuotas_altas.items()):
-        if ahora >= tiempo + timedelta(minutes=4) and ahora <= tiempo + timedelta(minutes=7):
-            pred = predecir_con_neuronal(historial)
-            if pred != "clear":
-                print("🟢 Pronóstico: próxima cuota probable mayor a 2.00 (por cuota alta detectada)")
-                del cuotas_altas[tiempo]
 
 # ===============================
 # Decoradores de autenticación
@@ -226,12 +109,21 @@ def login():
             return render_template("login.html", error="Credenciales inválidas")
         if user.expires < datetime.utcnow().date():
             return render_template("login.html", error="⏳ El tiempo de uso ha expirado")
+        if user.is_logged_in:  # 👈 Previene doble sesión
+            return render_template("login.html", error="⚠️ Este usuario ya tiene una sesión activa")
+        user.is_logged_in = True
+        db.session.commit()
         session["user"] = user.email
         return redirect(url_for("index"))
     return render_template("login.html")
 
 @app.route("/logout")
 def logout():
+    if "user" in session:
+        user = User.query.filter_by(email=session["user"]).first()
+        if user:
+            user.is_logged_in = False  # 👈 Cierra sesión activa
+            db.session.commit()
     session.clear()
     return redirect(url_for("login"))
 
@@ -261,6 +153,16 @@ def admin_panel():
         return redirect(url_for("admin_panel"))
     usuarios = User.query.all()
     return render_template("admin.html", users=usuarios, admin=session.get("user"))
+
+# 👇 NUEVA RUTA: Forzar cierre de sesión desde admin
+@app.route("/forzar_logout/<int:id>")
+@admin_required
+def forzar_logout(id):
+    user = User.query.get(id)
+    if user and not user.is_admin:
+        user.is_logged_in = False
+        db.session.commit()
+    return redirect(url_for("admin_panel"))
 
 @app.route("/eliminar_usuario/<int:id>")
 @admin_required
@@ -303,7 +205,6 @@ def guardar():
     if len(historial) > 100:
         historial.pop(0)
 
-    # Guardar hora si cuota > 8.00
     if valor >= 8.00:
         cuotas_altas[datetime.now()] = valor
 
@@ -331,9 +232,6 @@ def limpiar_todo():
     pd.DataFrame(historial, columns=["cuota"]).to_csv(DATA_PATH, index=False)
     return jsonify({"status": "ok"})
 
-# ===============================
-# Endpoint para Render
-# ===============================
 @app.route('/ping')
 def ping():
     return "pong", 200
