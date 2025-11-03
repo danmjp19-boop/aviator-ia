@@ -7,16 +7,16 @@
 <style>
     body { background-color: #000; color: cyan; font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 20px; }
     h1 { color: #00ffff; }
-    .container { max-width: 400px; margin: 0 auto; background: #111; padding: 20px; border-radius: 15px; box-shadow: 0 0 15px cyan; }
+    .container { max-width: 400px; margin: 0 auto; background: #111; padding: 20px; border-radius: 15px; box-shadow: 0 0 15px cyan; display: flex; flex-direction: column; align-items: center; }
     #hora { font-size: 1.2em; color: #0ff; margin-bottom: 10px; letter-spacing: 1px; }
-    #display { background: #000; color: #0ff; font-size: 2em; padding: 10px; border: 2px solid cyan; border-radius: 10px; min-height: 40px; margin-bottom: 15px; }
+    #display { background: #000; color: #0ff; font-size: 2em; padding: 10px; border: 2px solid cyan; border-radius: 10px; min-height: 40px; margin-bottom: 15px; width: 100%; }
     .teclado button { width: 30%; margin: 5px; padding: 10px; font-size: 1.2em; border-radius: 10px; background: #022; color: cyan; border: 1px solid #0ff; cursor: pointer; }
-    .acciones { margin-top: 10px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+    .acciones { margin-top: 10px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; width: 100%; }
     .acciones button { flex: 1; padding: 10px; border-radius: 10px; background: cyan; color: black; font-weight: bold; cursor: pointer; }
     .limpiar { background: #f00; color: white; margin-top: 20px; width: 100%; font-weight: bold; border: 2px solid #faa; transition: all 0.2s ease; }
     .limpiar:hover { background: #c00; box-shadow: 0 0 10px red; }
     #mensaje_ia { margin-top: 15px; font-size: 1.2em; color: lime; min-height: 1.5em; transition: opacity .3s ease; }
-    #historial { margin-top: 15px; display: flex; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; justify-content: flex-start; gap: 6px; scrollbar-width: thin; scroll-behavior: smooth; padding-bottom: 10px; border-top: 1px solid cyan; border-bottom: 1px solid cyan; }
+    #historial { margin-top: 15px; display: flex; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; justify-content: flex-start; gap: 6px; scrollbar-width: thin; scroll-behavior: smooth; padding-bottom: 10px; border-top: 1px solid cyan; border-bottom: 1px solid cyan; width: 100%; }
     #historial span { background: #033; padding: 5px 10px; border-radius: 5px; color: #0ff; white-space: nowrap; flex-shrink: 0; font-weight: bold; }
     .user-bar { margin-bottom: 10px; text-align: center; font-size: 0.95em; }
     .user-bar span { color: #0ff; font-weight: bold; }
@@ -51,148 +51,92 @@
 
     <div id="mensaje_ia"></div>
 
-    <h2>Historial</h2>
-    <div id="historial">
-        {% for h in historial %}
-            <span>{{'%.2f'|format(h)}}</span>
-        {% endfor %}
-    </div>
+    <!-- Gráfico primero -->
+    <canvas id="grafico" style="background:#000;border:2px solid cyan;border-radius:10px;margin-top:15px;" height="180"></canvas>
+
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Historial completamente abajo -->
+<h2>Historial</h2>
+<div id="historial">
+    {% for h in historial %}
+        <span>{{'%.2f'|format(h)}}</span>
+    {% endfor %}
+</div>
 
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-
     const display = document.getElementById("display");
     const historialDiv = document.getElementById("historial");
     const mensajeIA = document.getElementById("mensaje_ia");
     const horaDiv = document.getElementById("hora");
+    const ctx = document.getElementById("grafico").getContext("2d");
 
-    // === GRAFICO ===
-    const grafCanvas = document.createElement("canvas");
-    grafCanvas.id = "grafico";
-    grafCanvas.style.background = "#000";
-    grafCanvas.style.border = "2px solid cyan";
-    grafCanvas.style.borderRadius = "10px";
-    grafCanvas.style.marginTop = "15px";
-    grafCanvas.height = 180;
-    document.querySelector(".container").appendChild(grafCanvas);
-
-    const ctx = grafCanvas.getContext("2d");
     let grafico = new Chart(ctx, {
         type: "line",
-        data: { labels: [], datasets: [] },
+        data: { labels: [], datasets: [{ label: "Tendencia", data: [], borderColor: "cyan", borderWidth: 2, pointRadius: 4, pointBackgroundColor: "cyan", tension: 0 }] },
         options: {
             responsive: true,
             plugins: { legend: { display: false } },
             scales: {
                 x: { ticks: { color: "cyan" }, grid: { color: "#222" } },
-                y: {
-                    ticks: { color: "cyan" },
-                    grid: { color: "#222" },
-                    min: -10, max: 10
-                }
+                y: { min: -5, max: 5, ticks: { color: "cyan" }, grid: { color: "#222" } }
             }
         }
     });
 
     function actualizarHora() {
-        const ahora = new Date();
-        horaDiv.innerText = "🕒 " + ahora.toLocaleTimeString('es-ES', {hour12:false});
+        horaDiv.innerText = "🕒 " + new Date().toLocaleTimeString('es-ES', {hour12:false});
     }
     setInterval(actualizarHora, 1000);
     actualizarHora();
 
-    function _tecla(t) {
-        if (t === "Borrar") display.innerText = display.innerText.slice(0, -1);
-        else display.innerText += t;
-    }
+    function _tecla(t){ if(t==="Borrar")display.innerText=display.innerText.slice(0,-1); else display.innerText+=t; }
 
-    function _guardar() {
-        const cuotaStr = display.innerText.trim();
-        if (!cuotaStr) return;
-        const cuota = parseFloat(cuotaStr);
-        if (isNaN(cuota)) return;
-
-        fetch("/guardar", {
-            method: "POST",
-            headers: {"Content-Type":"application/x-www-form-urlencoded"},
-            body: new URLSearchParams({cuota: cuotaStr})
-        })
+    function _guardar(){
+        const cuota=parseFloat(display.innerText.trim());
+        if(isNaN(cuota))return;
+        fetch("/guardar",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({cuota})})
         .then(r=>r.json())
         .then(d=>{
-            display.innerText = "";
-            mensajeIA.innerText = (d.prediccion && d.prediccion!=="clear") ? d.prediccion : "";
-
-            const span = document.createElement("span");
-            span.innerText = cuota.toFixed(2);
+            display.innerText="";
+            mensajeIA.innerText=(d.prediccion&&d.prediccion!=="clear")?d.prediccion:"";
+            const span=document.createElement("span");
+            span.innerText=cuota.toFixed(2);
             historialDiv.appendChild(span);
-            if (historialDiv.children.length > 100) historialDiv.removeChild(historialDiv.children[0]);
-            historialDiv.scrollLeft = historialDiv.scrollWidth;
+            if(historialDiv.children.length>100)historialDiv.removeChild(historialDiv.children[0]);
+            historialDiv.scrollLeft=historialDiv.scrollWidth;
             actualizarGrafico();
         });
     }
 
-    function _deshacer() {
-        fetch("/borrar_ultimo", {method: "POST"})
-        .then(r=>r.json())
-        .then(()=>{
-            if (historialDiv.children.length > 0) historialDiv.removeChild(historialDiv.lastChild);
-            mensajeIA.innerText = "";
-            actualizarGrafico();
-        });
+    function _deshacer(){
+        fetch("/borrar_ultimo",{method:"POST"}).then(()=>{ if(historialDiv.lastChild)historialDiv.removeChild(historialDiv.lastChild); actualizarGrafico(); mensajeIA.innerText=""; });
     }
 
-    function _limpiarPantalla() {
-        if (!confirm("⚠️ ¿Seguro que deseas borrar el historial y reiniciar la pantalla?")) return;
-        fetch("/limpiar_todo", {method: "POST"})
-        .then(r=>r.json())
-        .then(()=>{
-            historialDiv.innerHTML = "";
-            mensajeIA.innerText = "";
-            display.innerText = "";
-            grafico.data.labels = [];
-            grafico.data.datasets = [];
-            grafico.update();
-            alert("✅ Pantalla e historial reiniciados.");
-        });
+    function _limpiarPantalla(){
+        if(!confirm("⚠️ ¿Seguro que deseas borrar el historial y reiniciar la pantalla?"))return;
+        fetch("/limpiar_todo",{method:"POST"}).then(()=>{ historialDiv.innerHTML=""; mensajeIA.innerText=""; display.innerText=""; grafico.data.labels=[]; grafico.data.datasets[0].data=[]; grafico.update(); alert("✅ Pantalla e historial reiniciados."); });
     }
 
-    let y = 0;
-    function actualizarGrafico() {
-        const cuotas = Array.from(historialDiv.children).map(s=>parseFloat(s.innerText));
-        const ultimas = cuotas.slice(-25);
-        grafico.data.labels = ultimas.map((_,i)=>i+1);
-        grafico.data.datasets = [];
-
-        let data = [];
-        y = 0;
-        ultimas.forEach((c,i)=>{
-            if (c < 2) y -= 1; else y += 1;
-            data.push(y);
+    function actualizarGrafico(){
+        const cuotas=Array.from(historialDiv.children).map(s=>parseFloat(s.innerText));
+        let data=[]; let valor=0;
+        cuotas.forEach(c=>{
+            if(c<2)valor-=1; else valor+=1;
+            data.push(valor);
         });
-
-        grafico.data.datasets.push({
-            data,
-            borderColor: "#a0f",
-            borderWidth: 2,
-            pointRadius: 4,
-            pointBackgroundColor: ultimas.map(c=>c<2?"#0ff":"#a0f"),
-            fill: false,
-            tension: 0
-        });
-
+        grafico.data.labels=data.map((_,i)=>i+1);
+        grafico.data.datasets[0].data=data;
+        grafico.data.datasets[0].borderColor=data.map((v,i)=>cuotas[i]<2?"cyan":"magenta");
+        grafico.data.datasets[0].pointBackgroundColor=data.map((v,i)=>cuotas[i]<2?"cyan":"magenta");
         grafico.update();
     }
 
-    window.tecla = _tecla;
-    window.guardar = _guardar;
-    window.deshacer = _deshacer;
-    window.limpiarPantalla = _limpiarPantalla;
-
+    window.tecla=_tecla; window.guardar=_guardar; window.deshacer=_deshacer; window.limpiarPantalla=_limpiarPantalla;
     actualizarGrafico();
-
 });
 </script>
 </body>
