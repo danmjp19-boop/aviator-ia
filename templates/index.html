@@ -129,12 +129,11 @@ let grafico = new Chart(ctx, {
             label: "Tendencia",
             data: [],
             borderColor: "#00ffff",
-            borderWidth: 3,
-            backgroundColor: "rgba(0,255,255,0.2)",
+            borderWidth: 2,
             pointBackgroundColor: "#fff",
-            pointRadius: 5,
+            pointRadius: 4,
             pointBorderColor: "#0ff",
-            tension: 0 // 🔹 Líneas rectas sin curvas
+            tension: 0 // 🔹 sin curvas
         }]
     },
     options: {
@@ -148,14 +147,13 @@ let grafico = new Chart(ctx, {
         scales: {
             x: {
                 ticks: { color: "#0ff" },
-                grid: { color: "#333" }
+                grid: { color: "#222" }
             },
             y: {
                 ticks: { color: "#0ff" },
                 grid: { color: "orange" },
-                min: -2,
-                max: 2,
-                zeroLineColor: "red"
+                min: -1.5,
+                max: 1.5
             }
         }
     }
@@ -201,10 +199,11 @@ function actualizarGrafico() {
 
     grafico.data.labels = datos.map((_, i) => i + 1);
 
-    // 🔹 Generar valores alternados arriba/abajo visibles (líneas diagonales)
+    // 🔹 Representación de líneas diagonales con eje 0 en el medio
     let normalizados = [];
     for (let i = 0; i < datos.length; i++) {
-        normalizados.push((i % 2 === 0 ? -1 : 1) * (Math.min(1 + (i * 0.1), 1.5)));
+        let dir = (i % 2 === 0 ? -1 : 1);
+        normalizados.push(dir * (Math.abs(i % 4 - 1) * 0.5));
     }
 
     grafico.data.datasets[0].data = normalizados;
