@@ -8,11 +8,12 @@
     body { background-color: #000; color: cyan; font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 20px; }
     h1 { color: #00ffff; }
     .container { max-width: 400px; margin: 0 auto; background: #111; padding: 20px; border-radius: 15px; box-shadow: 0 0 15px cyan; display: flex; flex-direction: column; align-items: center; }
-    #hora-box { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 10px; }
-    #hora { font-size: 1.2em; color: #0ff; letter-spacing: 1px; flex: 1; text-align: left; }
-    #analisis-box { display: flex; align-items: center; gap: 5px; }
-    #entradaAnalisis { background: #000; border: 1px solid cyan; border-radius: 8px; color: #0ff; padding: 6px; width: 130px; text-align: center; }
-    #botonAnalisis { background: cyan; border: none; color: #000; font-weight: bold; border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+    #hora-analisis { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 10px; }
+    #hora { font-size: 1.1em; color: #0ff; letter-spacing: 1px; }
+    #analisisBox { display: flex; gap: 6px; }
+    #analisisInput { width: 100px; padding: 5px; border: 1px solid cyan; background: #000; color: cyan; border-radius: 8px; text-align: center; }
+    #analizarBtn { padding: 5px 10px; background: cyan; color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+    #analizarBtn:hover { background: #0ff; }
     #display { background: #000; color: #0ff; font-size: 2em; padding: 10px; border: 2px solid cyan; border-radius: 10px; min-height: 40px; margin-bottom: 15px; width: 100%; }
     .teclado button { width: 30%; margin: 5px; padding: 10px; font-size: 1.2em; border-radius: 10px; background: #022; color: cyan; border: 1px solid #0ff; cursor: pointer; }
     .acciones { margin-top: 10px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; width: 100%; }
@@ -37,11 +38,11 @@
 </div>
 
 <div class="container">
-    <div id="hora-box">
+    <div id="hora-analisis">
         <div id="hora"></div>
-        <div id="analisis-box">
-            <input type="text" id="entradaAnalisis" placeholder="1.84x 03:52:27">
-            <button id="botonAnalisis">Iniciar</button>
+        <div id="analisisBox">
+            <input type="text" id="analisisInput" placeholder="1.84x 03:52:27">
+            <button id="analizarBtn">Iniciar</button>
         </div>
     </div>
 
@@ -61,9 +62,7 @@
     <button class="limpiar" onclick="limpiarPantalla()">🧹 Limpiar Pantalla</button>
 
     <div id="mensaje_ia"></div>
-
     <canvas id="grafico" style="background:#000;border:2px solid cyan;border-radius:10px;margin-top:15px;" height="180"></canvas>
-
 </div>
 
 <h2>Historial</h2>
@@ -73,35 +72,111 @@
     {% endfor %}
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-    const horaDiv = document.getElementById("hora");
-    const entradaAnalisis = document.getElementById("entradaAnalisis");
+    const display=document.getElementById("display");
+    const historialDiv=document.getElementById("historial");
+    const mensajeIA=document.getElementById("mensaje_ia");
+    const horaDiv=document.getElementById("hora");
+    const ctx=document.getElementById("grafico").getContext("2d");
+    const input=document.getElementById("analisisInput");
+    const btn=document.getElementById("analizarBtn");
 
-    function actualizarHora() {
-        horaDiv.innerText = "🕒 " + new Date().toLocaleTimeString('es-ES', {hour12:false});
-    }
-    setInterval(actualizarHora, 1000);
-    actualizarHora();
-
-    document.getElementById("botonAnalisis").addEventListener("click", iniciarAnalisis);
-    entradaAnalisis.addEventListener("paste", e => {
-        setTimeout(() => iniciarAnalisis(), 100);
+    let grafico=new Chart(ctx,{
+        type:"line",
+        data:{labels:[],datasets:[{label:"Tendencia",data:[],borderColor:"cyan",borderWidth:2,pointRadius:4,pointBackgroundColor:"cyan",tension:0}]},
+        options:{
+            responsive:true,
+            plugins:{legend:{display:false}},
+            scales:{
+                x:{ticks:{color:"cyan"},grid:{color:"#222"}},
+                y:{min:-5,max:5,ticks:{color:"cyan"},grid:{color:"#222"}}
+            }
+        }
     });
 
-    function iniciarAnalisis() {
-        const texto = entradaAnalisis.value.trim();
-        const match = texto.match(/([\d.]+)x\s+(\d{2}):(\d{2}):(\d{2})/);
-        if (!match) return;
-        let cuota = parseFloat(match[1]);
-        let h = parseInt(match[2]), m = parseInt(match[3]), s = parseInt(match[4]);
-        let totalSegundos = h * 3600 + m * 60 + s + Math.round(cuota * 60);
-        let nuevaH = Math.floor(totalSegundos / 3600) % 24;
-        let nuevaM = Math.floor((totalSegundos % 3600) / 60);
-        let nuevaS = totalSegundos % 60;
-        const nuevoTiempo = `${String(nuevaH).padStart(2,'0')}:${String(nuevaM).padStart(2,'0')}:${String(nuevaS).padStart(2,'0')}`;
-        entradaAnalisis.value = `${cuota.toFixed(2)}x ${nuevoTiempo}`;
+    function actualizarHora(){
+        horaDiv.innerText="🕒 "+new Date().toLocaleTimeString('es-ES',{hour12:false});
     }
+    setInterval(actualizarHora,1000);
+    actualizarHora();
+
+    function _tecla(t){
+        if(t==="Borrar")display.innerText=display.innerText.slice(0,-1);
+        else display.innerText+=t;
+    }
+
+    function _guardar(){
+        const cuota=parseFloat(display.innerText.trim());
+        if(isNaN(cuota))return;
+        fetch("/guardar",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({cuota})})
+        .then(r=>r.json())
+        .then(d=>{
+            display.innerText="";
+            mensajeIA.innerText=(d.prediccion&&d.prediccion!=="clear")?d.prediccion:"";
+            const span=document.createElement("span");
+            span.innerText=cuota.toFixed(2);
+            historialDiv.appendChild(span);
+            if(historialDiv.children.length>100)historialDiv.removeChild(historialDiv.children[0]);
+            historialDiv.scrollLeft=historialDiv.scrollWidth;
+            actualizarGrafico();
+        });
+    }
+
+    function _deshacer(){
+        fetch("/borrar_ultimo",{method:"POST"}).then(()=>{
+            if(historialDiv.lastChild)historialDiv.removeChild(historialDiv.lastChild);
+            actualizarGrafico();
+            mensajeIA.innerText="";
+        });
+    }
+
+    function _limpiarPantalla(){
+        if(!confirm("⚠️ ¿Seguro que deseas borrar el historial y reiniciar la pantalla?"))return;
+        fetch("/limpiar_todo",{method:"POST"}).then(()=>{
+            historialDiv.innerHTML="";
+            mensajeIA.innerText="";
+            display.innerText="";
+            grafico.data.labels=[];
+            grafico.data.datasets[0].data=[];
+            grafico.update();
+            alert("✅ Pantalla e historial reiniciados.");
+        });
+    }
+
+    function actualizarGrafico(){
+        const cuotas=Array.from(historialDiv.children).map(s=>parseFloat(s.innerText));
+        let data=[]; let valor=0;
+        cuotas.forEach(c=>{ if(c<2)valor-=1; else valor+=1; data.push(valor); });
+        grafico.data.labels=data.map((_,i)=>i+1);
+        grafico.data.datasets[0].data=data;
+        grafico.update();
+    }
+
+    // === ANALISIS AUTOMATICO ===
+    function analizarEntrada(){
+        const texto=input.value.trim();
+        const match=texto.match(/([\d.]+)x\s*(\d{2}):(\d{2}):(\d{2})/);
+        if(!match)return;
+        const mult=parseFloat(match[1]);
+        const h=parseInt(match[2]),m=parseInt(match[3]),s=parseInt(match[4]);
+        const total=h*3600+m*60+s+mult*60;
+        const nh=Math.floor(total/3600)%24;
+        const nm=Math.floor((total%3600)/60);
+        const ns=Math.floor(total%60);
+        const nuevo=`${String(nh).padStart(2,"0")}:${String(nm).padStart(2,"0")}:${String(ns).padStart(2,"0")}`;
+        input.value=`${match[1]}x ${nuevo}`;
+    }
+
+    btn.onclick=analizarEntrada;
+    input.addEventListener("paste",()=>setTimeout(analizarEntrada,100));
+
+    window.tecla=_tecla;
+    window.guardar=_guardar;
+    window.deshacer=_deshacer;
+    window.limpiarPantalla=_limpiarPantalla;
+    actualizarGrafico();
 });
 </script>
 </body>
