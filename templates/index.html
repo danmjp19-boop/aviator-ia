@@ -1,172 +1,144 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Aviator Pronosticador IA</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title✈️ Aviator Pronosticador IA</title>
 <style>
-body{
-  background:#000;
-  color:#0ff;
-  font-family:'Consolas',monospace;
-  text-align:center;
-}
-.container{
-  width:320px;
-  margin:auto;
-  border:2px solid #0ff;
-  border-radius:15px;
-  padding:10px;
-  box-shadow:0 0 15px #0ff;
-}
-button{
-  background:#0ff;
-  color:#000;
-  border:none;
-  border-radius:8px;
-  padding:8px;
-  margin:4px;
-  cursor:pointer;
-  font-weight:bold;
-}
-button:hover{background:#0cc;}
-#limpiar{background:red;color:#fff;}
-#historial{
-  display:flex;
-  overflow-x:auto;
-  border:1px solid #0ff;
-  padding:5px;
-  border-radius:8px;
-  margin-top:5px;
-}
-#historial span{
-  margin:0 5px;
-  background:#022;
-  padding:3px 6px;
-  border-radius:5px;
-}
-canvas{background:#000;border:1px solid #0ff;border-radius:8px;}
-#mensajeIA{margin-top:8px;color:#0ff;font-weight:bold;}
+    body { background-color: #000; color: cyan; font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 20px; }
+    h1 { color: #00ffff; }
+    .container { max-width: 400px; margin: 0 auto; background: #111; padding: 20px; border-radius: 15px; box-shadow: 0 0 15px cyan; display: flex; flex-direction: column; align-items: center; }
+    #hora { font-size: 1.2em; color: #0ff; margin-bottom: 10px; letter-spacing: 1px; }
+    #display { background: #000; color: #0ff; font-size: 2em; padding: 10px; border: 2px solid cyan; border-radius: 10px; min-height: 40px; margin-bottom: 15px; width: 100%; }
+    .teclado button { width: 30%; margin: 5px; padding: 10px; font-size: 1.2em; border-radius: 10px; background: #022; color: cyan; border: 1px solid #0ff; cursor: pointer; }
+    .acciones { margin-top: 10px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; width: 100%; }
+    .acciones button { flex: 1; padding: 10px; border-radius: 10px; background: cyan; color: black; font-weight: bold; cursor: pointer; }
+    .limpiar { background: #f00; color: white; margin-top: 20px; width: 100%; font-weight: bold; border: 2px solid #faa; transition: all 0.2s ease; }
+    .limpiar:hover { background: #c00; box-shadow: 0 0 10px red; }
+    #mensaje_ia { margin-top: 15px; font-size: 1.2em; color: lime; min-height: 1.5em; transition: opacity .3s ease; }
+    #historial { margin-top: 15px; display: flex; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; justify-content: flex-start; gap: 6px; scrollbar-width: thin; scroll-behavior: smooth; padding-bottom: 10px; border-top: 1px solid cyan; border-bottom: 1px solid cyan; width: 100%; }
+    #historial span { background: #033; padding: 5px 10px; border-radius: 5px; color: #0ff; white-space: nowrap; flex-shrink: 0; font-weight: bold; }
+    .user-bar { margin-bottom: 10px; text-align: center; font-size: 0.95em; }
+    .user-bar span { color: #0ff; font-weight: bold; }
+    .user-bar a { color: #ff5555; text-decoration: none; font-weight: bold; margin-left: 8px; }
+    .user-bar a:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
-<div class="container">
-  <div style="font-size:13px;text-align:right;">
-    📧 <span id="userEmail">danmjpp@gmail.com</span> | 
-    <a href="#" style="color:#f55;text-decoration:none;">Cerrar sesión</a>
-  </div>
-  <div id="timer">⏱️ 0:34:49</div>
-  <div>
-    <input type="text" id="display" readonly style="width:90%;margin:8px 0;text-align:center;font-size:18px;background:#000;color:#0ff;border:1px solid #0ff;border-radius:8px;">
-  </div>
-  <div id="botonera">
-    <div>
-      <button onclick="add('1')">1</button><button onclick="add('2')">2</button><button onclick="add('3')">3</button>
-    </div>
-    <div>
-      <button onclick="add('4')">4</button><button onclick="add('5')">5</button><button onclick="add('6')">6</button>
-    </div>
-    <div>
-      <button onclick="add('7')">7</button><button onclick="add('8')">8</button><button onclick="add('9')">9</button>
-    </div>
-    <div>
-      <button onclick="add('.')">.</button><button onclick="add('0')">0</button><button onclick="borrar()">Borrar</button>
-    </div>
-  </div>
-  <div>
-    <button onclick="ingresar()">Ingresar</button>
-    <button onclick="deshacer()">Deshacer</button>
-  </div>
-  <button id="limpiar" onclick="limpiar()">🧹 Limpiar Pantalla</button>
+<h1>✈️ Aviator Pronosticador IA</h1>
 
-  <div id="mensajeIA">🤖 Pronosticador IA listo...</div>
-
-  <h3>Gráfico de Tendencias</h3>
-  <canvas id="grafico" width="300" height="200"></canvas>
-
-  <h3>Historial</h3>
-  <div id="historial"></div>
+<div class="user-bar">
+    <span>📧 {{ usuario }}</span> |
+    <a href="/logout">Cerrar sesión</a>
 </div>
 
+<div class="container">
+    <div id="hora"></div>
+    <div id="display"></div>
+
+    <div class="teclado">
+        {% for n in [1,2,3,4,5,6,7,8,9,'.',0,'Borrar'] %}
+            <button onclick="tecla('{{n}}')">{{n}}</button>
+        {% endfor %}
+    </div>
+
+    <div class="acciones">
+        <button onclick="guardar()">Ingresar</button>
+        <button onclick="deshacer()">↩️ Deshacer</button>
+    </div>
+
+    <button class="limpiar" onclick="limpiarPantalla()">🧹 Limpiar Pantalla</button>
+
+    <div id="mensaje_ia"></div>
+
+    <!-- Gráfico primero -->
+    <canvas id="grafico" style="background:#000;border:2px solid cyan;border-radius:10px;margin-top:15px;" height="180"></canvas>
+
+</div>
+
+<!-- Historial completamente abajo -->
+<h2>Historial</h2>
+<div id="historial">
+    {% for h in historial %}
+        <span>{{'%.2f'|format(h)}}</span>
+    {% endfor %}
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-let display=document.getElementById("display");
-let historialDiv=document.getElementById("historial");
-let graficoCtx=document.getElementById("grafico").getContext("2d");
-let mensajeIA=document.getElementById("mensajeIA");
+document.addEventListener("DOMContentLoaded", () => {
+    const display = document.getElementById("display");
+    const historialDiv = document.getElementById("historial");
+    const mensajeIA = document.getElementById("mensaje_ia");
+    const horaDiv = document.getElementById("hora");
+    const ctx = document.getElementById("grafico").getContext("2d");
 
-let grafico=new Chart(graficoCtx,{
-  type:"line",
-  data:{
-    labels:[],
-    datasets:[{
-      label:"Tendencia",
-      data:[],
-      borderColor:"cyan",
-      borderWidth:2,
-      pointBackgroundColor:"cyan",
-      fill:false,
-      tension:0
-    }]
-  },
-  options:{
-    responsive:false,
-    scales:{
-      x:{ticks:{color:"#0ff"}},
-      y:{ticks:{color:"#0ff"}}
-    },
-    plugins:{legend:{labels:{color:"#0ff"}}}
-  }
-});
+    let grafico = new Chart(ctx, {
+        type: "line",
+        data: { labels: [], datasets: [{ label: "Tendencia", data: [], borderColor: "cyan", borderWidth: 2, pointRadius: 4, pointBackgroundColor: "cyan", tension: 0 }] },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { color: "cyan" }, grid: { color: "#222" } },
+                y: { min: -5, max: 5, ticks: { color: "cyan" }, grid: { color: "#222" } }
+            }
+        }
+    });
 
-function add(num){display.value+=num;}
-function borrar(){display.value=display.value.slice(0,-1);}
-function limpiar(){
-  if(confirm("¿Seguro que deseas limpiar todo?")){
-    display.value="";
-    historialDiv.innerHTML="";
-    grafico.data.labels=[];
-    grafico.data.datasets[0].data=[];
-    grafico.update();
-  }
-}
-function deshacer(){
-  if(historialDiv.lastChild){
-    historialDiv.removeChild(historialDiv.lastChild);
+    function actualizarHora() {
+        horaDiv.innerText = "🕒 " + new Date().toLocaleTimeString('es-ES', {hour12:false});
+    }
+    setInterval(actualizarHora, 1000);
+    actualizarHora();
+
+    function _tecla(t){ if(t==="Borrar")display.innerText=display.innerText.slice(0,-1); else display.innerText+=t; }
+
+    function _guardar(){
+        const cuota=parseFloat(display.innerText.trim());
+        if(isNaN(cuota))return;
+        fetch("/guardar",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({cuota})})
+        .then(r=>r.json())
+        .then(d=>{
+            display.innerText="";
+            mensajeIA.innerText=(d.prediccion&&d.prediccion!=="clear")?d.prediccion:"";
+            const span=document.createElement("span");
+            span.innerText=cuota.toFixed(2);
+            historialDiv.appendChild(span);
+            if(historialDiv.children.length>100)historialDiv.removeChild(historialDiv.children[0]);
+            historialDiv.scrollLeft=historialDiv.scrollWidth;
+            actualizarGrafico();
+        });
+    }
+
+    function _deshacer(){
+        fetch("/borrar_ultimo",{method:"POST"}).then(()=>{ if(historialDiv.lastChild)historialDiv.removeChild(historialDiv.lastChild); actualizarGrafico(); mensajeIA.innerText=""; });
+    }
+
+    function _limpiarPantalla(){
+        if(!confirm("⚠️ ¿Seguro que deseas borrar el historial y reiniciar la pantalla?"))return;
+        fetch("/limpiar_todo",{method:"POST"}).then(()=>{ historialDiv.innerHTML=""; mensajeIA.innerText=""; display.innerText=""; grafico.data.labels=[]; grafico.data.datasets[0].data=[]; grafico.update(); alert("✅ Pantalla e historial reiniciados."); });
+    }
+
+    function actualizarGrafico(){
+        let cuotas=Array.from(historialDiv.children).map(s=>parseFloat(s.innerText));
+        if(cuotas.length>30) cuotas=cuotas.slice(-30); // 🔹 límite máximo 30 puntos
+        let data=[]; let valor=0;
+        cuotas.forEach(c=>{
+            if(c<2)valor-=1; else valor+=1;
+            data.push(valor);
+        });
+        grafico.data.labels=data.map((_,i)=>i+1);
+        grafico.data.datasets[0].data=data;
+        grafico.data.datasets[0].borderColor=data.map((v,i)=>cuotas[i]<2?"cyan":"magenta");
+        grafico.data.datasets[0].pointBackgroundColor=data.map((v,i)=>cuotas[i]<2?"cyan":"magenta");
+        grafico.update();
+    }
+
+    window.tecla=_tecla; window.guardar=_guardar; window.deshacer=_deshacer; window.limpiarPantalla=_limpiarPantalla;
     actualizarGrafico();
-  }
-}
-function ingresar(){
-  if(display.value.trim()==="")return;
-  let val=parseFloat(display.value);
-  if(isNaN(val))return;
-  let span=document.createElement("span");
-  span.textContent=val.toFixed(2);
-  historialDiv.appendChild(span);
-  display.value="";
-  actualizarGrafico();
-  pronosticoIA(val);
-}
-function actualizarGrafico(){
-  let cuotas=Array.from(historialDiv.children).map(s=>parseFloat(s.innerText));
-  if(cuotas.length>30)cuotas=cuotas.slice(-30); // solo últimos 30 valores
-  let data=[]; let valor=0;
-  cuotas.forEach(c=>{
-    if(c<2)valor-=1; else valor+=1;
-    data.push(valor);
-  });
-  grafico.data.labels=data.map((_,i)=>i+1);
-  grafico.data.datasets[0].data=data;
-  grafico.data.datasets[0].borderColor=data.map((v,i)=>cuotas[i]<2?"cyan":"magenta");
-  grafico.data.datasets[0].pointBackgroundColor=grafico.data.datasets[0].borderColor;
-  grafico.update();
-}
-function pronosticoIA(val){
-  if(val>=2){
-    mensajeIA.textContent="🤖 Pronosticador IA: Tendencia al alza detectada (morada)";
-  }else{
-    mensajeIA.textContent="🤖 Pronosticador IA: Tendencia a la baja detectada (azul)";
-  }
-}
+});
 </script>
 </body>
 </html>
