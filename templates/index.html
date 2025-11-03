@@ -79,7 +79,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let grafico = new Chart(ctx, {
         type: "line",
-        data: { labels: [], datasets: [] },
+        data: { labels: [], datasets: [{ data: [] }] },
         options: {
             responsive: true,
             plugins: { legend: { display: false } },
@@ -128,35 +128,31 @@ document.addEventListener("DOMContentLoaded", () => {
         if(!confirm("⚠️ ¿Seguro que deseas borrar el historial y reiniciar la pantalla?"))return;
         fetch("/limpiar_todo",{method:"POST"}).then(()=>{ 
             historialDiv.innerHTML=""; mensajeIA.innerText=""; display.innerText="";
-            grafico.data.datasets=[]; grafico.update(); 
+            grafico.data.datasets=[{data:[]}]; grafico.update(); 
             alert("✅ Pantalla e historial reiniciados."); 
         });
     }
 
     function actualizarGrafico(){
         const cuotas = Array.from(historialDiv.children).map(s=>parseFloat(s.innerText));
+        const colores = cuotas.map(c => colorPorCuota(c));
         let data = []; let valor = 0;
+
         cuotas.forEach(c => {
             if(c < 2) valor -= 1; else valor += 1;
             data.push(valor);
         });
 
         grafico.data.labels = data.map((_,i)=>i+1);
-        grafico.data.datasets = [];
-
-        for (let i = 0; i < cuotas.length - 1; i++) {
-            const color = colorPorCuota(cuotas[i]);
-            grafico.data.datasets.push({
-                data: [
-                    {x: i + 1, y: data[i]},
-                    {x: i + 2, y: data[i + 1]}
-                ],
-                borderColor: color,
-                pointBackgroundColor: color,
-                borderWidth: 3,
-                tension: 0
-            });
-        }
+        grafico.data.datasets = [{
+            data: data,
+            borderWidth: 3,
+            tension: 0,
+            segment: {
+                borderColor: ctx => colorPorCuota(cuotas[ctx.p0DataIndex]),
+            },
+            pointBackgroundColor: colores
+        }];
         grafico.update();
     }
 
