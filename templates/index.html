@@ -1,4 +1,4 @@
-<!DOCTYPE html>  
+<!DOCTYPE html> 
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -9,10 +9,9 @@
     h1 { color: #00ffff; }
     .container { max-width: 400px; margin: 0 auto; background: #111; padding: 20px; border-radius: 15px; box-shadow: 0 0 15px cyan; display: flex; flex-direction: column; align-items: center; }
     #hora-analisis { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 10px; }
-    #hora { font-size: 1.1em; color: #0ff; letter-spacing: 1px; }
-    #analisisBox { display: flex; gap: 6px; }
-    #analisisInput { width: 100px; padding: 5px; border: 1px solid cyan; background: #000; color: cyan; border-radius: 8px; text-align: center; }
-    #analizarBtn { padding: 5px 10px; background: cyan; color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+    #hora { font-size: 1.2em; color: #0ff; letter-spacing: 1px; }
+    #analisisInput { width: 120px; padding: 5px; border: 1px solid cyan; background: #000; color: cyan; border-radius: 8px; text-align: center; }
+    #analizarBtn { padding: 6px 10px; background: cyan; color: #000; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
     #analizarBtn:hover { background: #0ff; }
     #display { background: #000; color: #0ff; font-size: 2em; padding: 10px; border: 2px solid cyan; border-radius: 10px; min-height: 40px; margin-bottom: 15px; width: 100%; }
     .teclado button { width: 30%; margin: 5px; padding: 10px; font-size: 1.2em; border-radius: 10px; background: #022; color: cyan; border: 1px solid #0ff; cursor: pointer; }
@@ -40,7 +39,7 @@
 <div class="container">
     <div id="hora-analisis">
         <div id="hora"></div>
-        <div id="analisisBox">
+        <div>
             <input type="text" id="analisisInput" placeholder="1.84x 03:52:27">
             <button id="analizarBtn">Iniciar</button>
         </div>
@@ -62,7 +61,9 @@
     <button class="limpiar" onclick="limpiarPantalla()">🧹 Limpiar Pantalla</button>
 
     <div id="mensaje_ia"></div>
+
     <canvas id="grafico" style="background:#000;border:2px solid cyan;border-radius:10px;margin-top:15px;" height="180"></canvas>
+
 </div>
 
 <h2>Historial</h2>
@@ -102,9 +103,12 @@ document.addEventListener("DOMContentLoaded", () => {
     setInterval(actualizarHora,1000);
     actualizarHora();
 
-    function _tecla(t){
-        if(t==="Borrar")display.innerText=display.innerText.slice(0,-1);
-        else display.innerText+=t;
+    function _tecla(t){ if(t==="Borrar")display.innerText=display.innerText.slice(0,-1); else display.innerText+=t; }
+
+    function colorPorCuota(cuota){
+        if(cuota<2)return"blue";
+        if(cuota<10)return"purple";
+        return"pink";
     }
 
     function _guardar(){
@@ -117,6 +121,7 @@ document.addEventListener("DOMContentLoaded", () => {
             mensajeIA.innerText=(d.prediccion&&d.prediccion!=="clear")?d.prediccion:"";
             const span=document.createElement("span");
             span.innerText=cuota.toFixed(2);
+            span.style.color=colorPorCuota(cuota);
             historialDiv.appendChild(span);
             if(historialDiv.children.length>100)historialDiv.removeChild(historialDiv.children[0]);
             historialDiv.scrollLeft=historialDiv.scrollWidth;
@@ -125,36 +130,25 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function _deshacer(){
-        fetch("/borrar_ultimo",{method:"POST"}).then(()=>{
-            if(historialDiv.lastChild)historialDiv.removeChild(historialDiv.lastChild);
-            actualizarGrafico();
-            mensajeIA.innerText="";
-        });
+        fetch("/borrar_ultimo",{method:"POST"}).then(()=>{if(historialDiv.lastChild)historialDiv.removeChild(historialDiv.lastChild);actualizarGrafico();mensajeIA.innerText="";});
     }
 
     function _limpiarPantalla(){
         if(!confirm("⚠️ ¿Seguro que deseas borrar el historial y reiniciar la pantalla?"))return;
-        fetch("/limpiar_todo",{method:"POST"}).then(()=>{
-            historialDiv.innerHTML="";
-            mensajeIA.innerText="";
-            display.innerText="";
-            grafico.data.labels=[];
-            grafico.data.datasets[0].data=[];
-            grafico.update();
-            alert("✅ Pantalla e historial reiniciados.");
-        });
+        fetch("/limpiar_todo",{method:"POST"}).then(()=>{historialDiv.innerHTML="";mensajeIA.innerText="";display.innerText="";grafico.data.labels=[];grafico.data.datasets[0].data=[];grafico.update();alert("✅ Pantalla e historial reiniciados.");});
     }
 
     function actualizarGrafico(){
         const cuotas=Array.from(historialDiv.children).map(s=>parseFloat(s.innerText));
-        let data=[]; let valor=0;
-        cuotas.forEach(c=>{ if(c<2)valor-=1; else valor+=1; data.push(valor); });
+        let data=[];let valor=0;
+        cuotas.forEach(c=>{if(c<2)valor-=1;else valor+=1;data.push(valor);});
         grafico.data.labels=data.map((_,i)=>i+1);
         grafico.data.datasets[0].data=data;
+        grafico.data.datasets[0].borderColor=cuotas.map(c=>colorPorCuota(c));
+        grafico.data.datasets[0].pointBackgroundColor=cuotas.map(c=>colorPorCuota(c));
         grafico.update();
     }
 
-    // === ANALISIS AUTOMATICO ===
     function analizarEntrada(){
         const texto=input.value.trim();
         const match=texto.match(/([\d.]+)x\s*(\d{2}):(\d{2}):(\d{2})/);
@@ -165,8 +159,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const nh=Math.floor(total/3600)%24;
         const nm=Math.floor((total%3600)/60);
         const ns=Math.floor(total%60);
-        const nuevo=`${String(nh).padStart(2,"0")}:${String(nm).padStart(2,"0")}:${String(ns).padStart(2,"0")}`;
-        input.value=`${match[1]}x ${nuevo}`;
+        input.value=`${match[1]}x ${String(nh).padStart(2,"0")}:${String(nm).padStart(2,"0")}:${String(ns).padStart(2,"0")}`;
     }
 
     btn.onclick=analizarEntrada;
@@ -176,7 +169,6 @@ document.addEventListener("DOMContentLoaded", () => {
     window.guardar=_guardar;
     window.deshacer=_deshacer;
     window.limpiarPantalla=_limpiarPantalla;
-    actualizarGrafico();
 });
 </script>
 </body>
