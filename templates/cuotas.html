@@ -1,43 +1,147 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Cuotas Aviator</title>
-    <style>
-        body {
-            background-color: #0a0a0a;
-            color: cyan;
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 40px;
-        }
-        h1 {
-            color: #00ffff;
-        }
-        .cuota {
-            background: rgba(0,255,255,0.1);
-            border: 1px solid cyan;
-            border-radius: 10px;
-            padding: 10px;
-            margin: 5px auto;
-            width: 200px;
-        }
-        a {
-            color: #ff0066;
-            text-decoration: none;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>✈️ Aviator Pronosticador IA</title>
+<style>
+    body { background-color: #000; color: cyan; font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 20px; }
+    h1 { color: #00ffff; }
+    .container { max-width: 400px; margin: 0 auto; background: #111; padding: 20px; border-radius: 15px; box-shadow: 0 0 15px cyan; display: flex; flex-direction: column; align-items: center; }
+    #hora { font-size: 1.2em; color: #0ff; margin-bottom: 10px; letter-spacing: 1px; }
+    #display { background: #000; color: #0ff; font-size: 2em; padding: 10px; border: 2px solid cyan; border-radius: 10px; min-height: 40px; margin-bottom: 15px; width: 100%; }
+    .teclado button { width: 30%; margin: 5px; padding: 10px; font-size: 1.2em; border-radius: 10px; background: #022; color: cyan; border: 1px solid #0ff; cursor: pointer; }
+    .acciones { margin-top: 10px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; width: 100%; }
+    .acciones button { flex: 1; padding: 10px; border-radius: 10px; background: cyan; color: black; font-weight: bold; cursor: pointer; }
+    .limpiar { background: #f00; color: white; margin-top: 20px; width: 100%; font-weight: bold; border: 2px solid #faa; transition: all 0.2s ease; }
+    .limpiar:hover { background: #c00; box-shadow: 0 0 10px red; }
+    #mensaje_ia { margin-top: 15px; font-size: 1.2em; color: lime; min-height: 1.5em; transition: opacity .3s ease; }
+    #historial { margin-top: 15px; display: flex; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; justify-content: flex-start; gap: 6px; scrollbar-width: thin; scroll-behavior: smooth; padding-bottom: 10px; border-top: 1px solid cyan; border-bottom: 1px solid cyan; width: 100%; }
+    #historial span { background: #033; padding: 5px 10px; border-radius: 5px; color: #0ff; white-space: nowrap; flex-shrink: 0; font-weight: bold; }
+    .user-bar { margin-bottom: 10px; text-align: center; font-size: 0.95em; }
+    .user-bar span { color: #0ff; font-weight: bold; }
+    .user-bar a { color: #ff5555; text-decoration: none; font-weight: bold; margin-left: 8px; }
+    .user-bar a:hover { text-decoration: underline; }
+</style>
 </head>
 <body>
-    <h1>💸 Cuotas del Aviator</h1>
-    <p><a href="/">⬅ Volver</a></p>
+<h1>✈️ Aviator Pronosticador IA</h1>
 
-    {% if cuotas %}
-        {% for c in cuotas %}
-            <div class="cuota">{{ c }}</div>
+<div class="user-bar">
+    <span>📧 {{ usuario }}</span> |
+    <a href="/logout">Cerrar sesión</a>
+</div>
+
+<div class="container">
+    <div id="hora"></div>
+    <div id="display"></div>
+
+    <div class="teclado">
+        {% for n in [1,2,3,4,5,6,7,8,9,'.',0,'Borrar'] %}
+            <button onclick="tecla('{{n}}')">{{n}}</button>
         {% endfor %}
-    {% else %}
-        <p>⚠️ No se pudieron obtener cuotas en este momento.</p>
-    {% endif %}
+    </div>
+
+    <div class="acciones">
+        <button onclick="guardar()">Ingresar</button>
+        <button onclick="deshacer()">↩️ Deshacer</button>
+    </div>
+
+    <button class="limpiar" onclick="limpiarPantalla()">🧹 Limpiar Pantalla</button>
+
+    <div id="mensaje_ia"></div>
+
+    <!-- Gráfico -->
+    <canvas id="grafico" style="background:#000;border:2px solid cyan;border-radius:10px;margin-top:15px;" height="180"></canvas>
+
+    <!-- Historial abajo -->
+    <h2>Historial</h2>
+    <div id="historial">
+        {% for h in historial %}
+            <span>{{'%.2f'|format(h)}}</span>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const display = document.getElementById("display");
+    const historialDiv = document.getElementById("historial");
+    const mensajeIA = document.getElementById("mensaje_ia");
+    const horaDiv = document.getElementById("hora");
+    const ctx = document.getElementById("grafico").getContext("2d");
+
+    let grafico = new Chart(ctx, {
+        type: "line",
+        data: { labels: [], datasets: [{ label: "Tendencia", data: [], borderColor: "cyan", borderWidth: 2, pointRadius: 4, pointBackgroundColor: "cyan", tension: 0 }] },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { color: "cyan" }, grid: { color: "#222" } },
+                y: {
+                    min: -5, max: 5,
+                    ticks: { color: "cyan" },
+                    grid: { color: "#222" },
+                    zeroLineColor: "white"
+                }
+            }
+        }
+    });
+
+    function actualizarHora() {
+        horaDiv.innerText = "🕒 " + new Date().toLocaleTimeString('es-ES', {hour12:false});
+    }
+    setInterval(actualizarHora, 1000);
+    actualizarHora();
+
+    function _tecla(t){ if(t==="Borrar")display.innerText=display.innerText.slice(0,-1); else display.innerText+=t; }
+
+    function _guardar(){
+        const cuota=parseFloat(display.innerText.trim());
+        if(isNaN(cuota))return;
+        fetch("/guardar",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({cuota})})
+        .then(r=>r.json())
+        .then(d=>{
+            display.innerText="";
+            mensajeIA.innerText=(d.prediccion&&d.prediccion!=="clear")?d.prediccion:"";
+            const span=document.createElement("span");
+            span.innerText=cuota.toFixed(2);
+            historialDiv.appendChild(span);
+            if(historialDiv.children.length>100)historialDiv.removeChild(historialDiv.children[0]);
+            historialDiv.scrollLeft=historialDiv.scrollWidth;
+            actualizarGrafico();
+        });
+    }
+
+    function _deshacer(){
+        fetch("/borrar_ultimo",{method:"POST"}).then(()=>{ if(historialDiv.lastChild)historialDiv.removeChild(historialDiv.lastChild); actualizarGrafico(); mensajeIA.innerText=""; });
+    }
+
+    function _limpiarPantalla(){
+        if(!confirm("⚠️ ¿Seguro que deseas borrar el historial y reiniciar la pantalla?"))return;
+        fetch("/limpiar_todo",{method:"POST"}).then(()=>{ historialDiv.innerHTML=""; mensajeIA.innerText=""; display.innerText=""; grafico.data.labels=[]; grafico.data.datasets[0].data=[]; grafico.update(); alert("✅ Pantalla e historial reiniciados."); });
+    }
+
+    function actualizarGrafico(){
+        const cuotas=Array.from(historialDiv.children).map(s=>parseFloat(s.innerText));
+        let data=[]; let valor=0;
+        cuotas.forEach(c=>{
+            if(c<2)valor-=1; else valor+=1;
+            data.push(valor);
+        });
+        grafico.data.labels=data.map((_,i)=>i+1);
+        grafico.data.datasets[0].data=data;
+        grafico.data.datasets[0].borderColor=data.map((v,i)=>cuotas[i]<2?"cyan":"magenta");
+        grafico.data.datasets[0].pointBackgroundColor=data.map((v,i)=>cuotas[i]<2?"cyan":"magenta");
+        grafico.update();
+    }
+
+    window.tecla=_tecla; window.guardar=_guardar; window.deshacer=_deshacer; window.limpiarPantalla=_limpiarPantalla;
+    actualizarGrafico();
+});
+</script>
 </body>
 </html>
