@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session 
 import pandas as pd
 import os
 import numpy as np
@@ -11,6 +11,7 @@ import joblib
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
+import time
 
 app = Flask(__name__)
 app.secret_key = "cambia_esta_clave_secreta_por_una_muy_larga"
@@ -35,6 +36,9 @@ scaler = None
 WINDOW = 5
 MIN_SAMPLES = 10
 training_lock = threading.Lock()
+
+# Nueva variable para monitoreo de cuotas altas
+cuotas_altas = {}
 
 # Admin por defecto
 ADMIN_USER = "danmjp@gmail.com"
@@ -150,7 +154,7 @@ def entrenar_neuronal():
         print("✅ Entrenamiento completado y modelo guardado.")
 
 # ===============================
-# Predicción
+# Predicción normal
 # ===============================
 def predecir_con_neuronal(hist):
     global model, scaler
@@ -167,6 +171,19 @@ def predecir_con_neuronal(hist):
         return "🟢 Pronóstico: próxima cuota probable mayor a 2.00"
     else:
         return "clear"
+
+# ===============================
+# 🔔 Análisis adicional: cuotas > 8.00
+# ===============================
+def analizar_cuotas_altas():
+    global cuotas_altas
+    ahora = datetime.now()
+    for tiempo, valor in list(cuotas_altas.items()):
+        if ahora >= tiempo + timedelta(minutes=4) and ahora <= tiempo + timedelta(minutes=7):
+            pred = predecir_con_neuronal(historial)
+            if pred != "clear":
+                print("🟢 Pronóstico: próxima cuota probable mayor a 2.00 (por cuota alta detectada)")
+                del cuotas_altas[tiempo]
 
 # ===============================
 # Decoradores de autenticación
@@ -285,9 +302,15 @@ def guardar():
     historial.append(valor)
     if len(historial) > 100:
         historial.pop(0)
+
+    # Guardar hora si cuota > 8.00
+    if valor >= 8.00:
+        cuotas_altas[datetime.now()] = valor
+
     os.makedirs(os.path.dirname(DATA_PATH), exist_ok=True)
     pd.DataFrame(historial, columns=["cuota"]).to_csv(DATA_PATH, index=False)
     entrenar_en_hilo()
+    analizar_cuotas_altas()
     pred = predecir_con_neuronal(historial)
     return jsonify({"prediccion": pred if pred else "clear"})
 
