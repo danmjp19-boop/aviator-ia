@@ -133,15 +133,16 @@ document.addEventListener("DOMContentLoaded", () => {
         for(let i=0;i<cuotas.length;i++){
             const c=cuotas[i];
             const color=colorPorCuota(c);
+            const valorAnterior = valor;
             valor += (c<2)?-1:1;
             grafico.data.datasets.push({
                 label: "Tendencia",
-                data: [{x:i,y:valor-(c<2?-1:1)}, {x:i+1,y:valor}],
+                data: [{x:i, y:valorAnterior}, {x:i+1, y:valor}],
                 borderColor: color,
                 pointBackgroundColor: color,
                 pointBorderColor: color,
                 borderWidth: 2,
-                tension: 0
+                tension: 0.3
             });
         }
         grafico.update();
