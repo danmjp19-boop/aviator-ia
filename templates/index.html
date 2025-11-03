@@ -1,11 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>✈️ Aviator Pronosticador IA</title>
+<style>
+    body {
+        background-color: #000;
+        color: cyan;
+        font-family: Arial, sans-serif;
+        text-align: center;
+        margin: 0;
+        padding: 20px;
+    }
+    h1 { color: #00ffff; }
+    .container {
+        max-width: 400px;
+        margin: 0 auto;
+        background: #111;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 0 15px cyan;
+    }
+    #hora {
+        font-size: 1.2em;
+        color: #0ff;
+        margin-bottom: 10px;
+        letter-spacing: 1px;
+    }
+    #display {
+        background: #000;
+        color: #0ff;
+        font-size: 2em;
+        padding: 10px;
+        border: 2px solid cyan;
+        border-radius: 10px;
+        min-height: 40px;
+        margin-bottom: 15px;
+    }
+    .teclado button {
+        width: 30%;
+        margin: 5px;
+        padding: 10px;
+        font-size: 1.2em;
+        border-radius: 10px;
+        background: #022;
+        color: cyan;
+        border: 1px solid #0ff;
+        cursor: pointer;
+    }
+    .acciones {
+        margin-top: 10px;
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    .acciones button {
+        flex: 1;
+        padding: 10px;
+        border-radius: 10px;
+        background: cyan;
+        color: black;
+        font-weight: bold;
+        cursor: pointer;
+    }
+    .limpiar {
+        background: #f00;
+        color: white;
+        margin-top: 20px;
+        width: 100%;
+        font-weight: bold;
+        border: 2px solid #faa;
+        transition: all 0.2s ease;
+    }
+    .limpiar:hover {
+        background: #c00;
+        box-shadow: 0 0 10px red;
+    }
+    #mensaje_ia {
+        margin-top: 15px;
+        font-size: 1.2em;
+        color: lime;
+        min-height: 1.5em;
+        transition: opacity .3s ease;
+    }
+    #historial {
+        margin-top: 15px;
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        justify-content: flex-start;
+        gap: 6px;
+        scrollbar-width: thin;
+        scroll-behavior: smooth;
+        padding-bottom: 10px;
+        border-top: 1px solid cyan;
+        border-bottom: 1px solid cyan;
+    }
+    #historial span {
+        background: #033;
+        padding: 5px 10px;
+        border-radius: 5px;
+        color: #0ff;
+        white-space: nowrap;
+        flex-shrink: 0;
+        font-weight: bold;
+    }
+    .user-bar {
+        margin-bottom: 10px;
+        text-align: center;
+        font-size: 0.95em;
+    }
+    .user-bar span {
+        color: #0ff;
+        font-weight: bold;
+    }
+    .user-bar a {
+        color: #ff5555;
+        text-decoration: none;
+        font-weight: bold;
+        margin-left: 8px;
+    }
+    .user-bar a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<h1>✈️ Aviator Pronosticador IA</h1>
+
+<div class="user-bar">
+    <span>📧 {{ usuario }}</span> |
+    <a href="/logout">Cerrar sesión</a>
+</div>
+
+<div class="container">
+    <div id="hora"></div>
+    <div id="display"></div>
+
+    <div class="teclado">
+        {% for n in [1,2,3,4,5,6,7,8,9,'.',0,'Borrar'] %}
+            <button onclick="tecla('{{n}}')">{{n}}</button>
+        {% endfor %}
+    </div>
+
+    <div class="acciones">
+        <button onclick="guardar()">Ingresar</button>
+        <button onclick="deshacer()">↩️ Deshacer</button>
+    </div>
+
+    <button class="limpiar" onclick="limpiarPantalla()">🧹 Limpiar Pantalla</button>
+
+    <div id="mensaje_ia"></div>
+
+    <h2>Historial</h2>
+    <div id="historial">
+        {% for h in historial %}
+            <span>{{'%.2f'|format(h)}}</span>
+        {% endfor %}
+    </div>
+
+    <h2>Análisis 📊</h2>
+    <div id="resumen_analitico" 
+         style="background:#011; color:#0ff; border:1px solid cyan; border-radius:10px;
+                padding:10px; font-size:1em; margin-top:10px; text-align:left; white-space:pre-line;">
+        Cargando análisis...
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+document.addEventListener("DOMContentLoaded", () => {
+
 const display = document.getElementById("display");
 const historialDiv = document.getElementById("historial");
 const mensajeIA = document.getElementById("mensaje_ia");
 const horaDiv = document.getElementById("hora");
 
-// === Inicializar gráfico ===
+// === GRAFICO ===
 const grafCanvas = document.createElement("canvas");
 grafCanvas.id = "grafico";
 grafCanvas.style.background = "#000";
@@ -21,54 +193,21 @@ let grafico = new Chart(ctx, {
     data: {
         labels: [],
         datasets: [
-            {
-                label: "Tendencia",
-                data: [],
-                borderColor: "white",
-                backgroundColor: "rgba(0,255,255,0.3)",
-                borderWidth: 2,
-                pointBackgroundColor: "white",
-                tension: 0.3,
-            },
-            {
-                label: "Soporte",
-                data: [],
-                borderColor: "lime",
-                borderWidth: 1.5,
-                borderDash: [5,5],
-                pointRadius: 0,
-            },
-            {
-                label: "Resistencia",
-                data: [],
-                borderColor: "red",
-                borderWidth: 1.5,
-                borderDash: [5,5],
-                pointRadius: 0,
-            }
+            { label: "Tendencia", data: [], borderColor: "white", backgroundColor: "rgba(0,255,255,0.3)", borderWidth: 2, tension: 0.3 },
+            { label: "Soporte", data: [], borderColor: "lime", borderDash: [5,5], borderWidth: 1.5, pointRadius: 0 },
+            { label: "Resistencia", data: [], borderColor: "red", borderDash: [5,5], borderWidth: 1.5, pointRadius: 0 }
         ]
     },
     options: {
         responsive: true,
-        plugins: {
-            legend: {
-                labels: { color: "cyan" }
-            }
-        },
+        plugins: { legend: { labels: { color: "cyan" } } },
         scales: {
-            x: {
-                ticks: { color: "cyan" },
-                grid: { color: "#222" }
-            },
-            y: {
-                ticks: { color: "cyan" },
-                grid: { color: "#222" }
-            }
+            x: { ticks: { color: "cyan" }, grid: { color: "#222" } },
+            y: { ticks: { color: "cyan" }, grid: { color: "#222" } }
         }
     }
 });
 
-// === Actualizar hora ===
 function actualizarHora() {
     const ahora = new Date();
     horaDiv.innerText = "🕒 " + ahora.toLocaleTimeString('es-ES', {hour12:false});
@@ -76,13 +215,11 @@ function actualizarHora() {
 setInterval(actualizarHora, 1000);
 actualizarHora();
 
-// === Botones ===
 function tecla(t) {
     if (t === "Borrar") display.innerText = display.innerText.slice(0,-1);
     else display.innerText += t;
 }
 
-// === Guardar cuota ===
 function guardar() {
     const cuota = display.innerText.trim();
     if (!cuota) return;
@@ -108,7 +245,6 @@ function guardar() {
     });
 }
 
-// === Deshacer ===
 function deshacer() {
     fetch("/borrar_ultimo",{method:"POST"}).then(()=>{
         if(historialDiv.children.length>0) historialDiv.removeChild(historialDiv.lastChild);
@@ -118,7 +254,6 @@ function deshacer() {
     });
 }
 
-// === Limpiar pantalla ===
 function limpiarPantalla() {
     if(!confirm("⚠️ ¿Seguro que deseas borrar el historial y reiniciar la pantalla?")) return;
     fetch("/limpiar_todo",{method:"POST"})
@@ -133,7 +268,6 @@ function limpiarPantalla() {
     });
 }
 
-// === Análisis ===
 function actualizarAnalisis() {
     fetch("/analisis")
     .then(r=>r.json())
@@ -146,7 +280,6 @@ function actualizarAnalisis() {
 }
 setInterval(actualizarAnalisis,5000);
 
-// === Gráfico ===
 function actualizarGrafico() {
     const cuotas = Array.from(historialDiv.children).map(s=>parseFloat(s.innerText));
     const ultimas = cuotas.slice(-25);
@@ -159,4 +292,8 @@ function actualizarGrafico() {
 
 actualizarAnalisis();
 actualizarGrafico();
+
+});
 </script>
+</body>
+</html>
