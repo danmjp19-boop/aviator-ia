@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>  
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -129,28 +129,21 @@ document.addEventListener("DOMContentLoaded", () => {
         const cuotas=Array.from(historialDiv.children).map(s=>parseFloat(s.innerText));
         grafico.data.datasets = [];
         let valor=0;
-        let data=[]; let colorActual=null;
 
-        cuotas.forEach((c,i)=>{
-            let color=colorPorCuota(c);
-            if(c<2)valor-=1; else valor+=1;
-            if(!colorActual) colorActual=color;
-            if(color!==colorActual || i===cuotas.length-1){
-                data.push(valor);
-                grafico.data.datasets.push({
-                    label: "Tendencia",
-                    data: data.map((v,j)=>({x:j+1,y:v})),
-                    borderColor: colorActual,
-                    pointBackgroundColor: colorActual,
-                    borderWidth: 2,
-                    tension: 0
-                });
-                data=[valor];
-                colorActual=color;
-            } else {
-                data.push(valor);
-            }
-        });
+        for(let i=0;i<cuotas.length;i++){
+            const c=cuotas[i];
+            const color=colorPorCuota(c);
+            valor += (c<2)?-1:1;
+            grafico.data.datasets.push({
+                label: "Tendencia",
+                data: [{x:i,y:valor-(c<2?-1:1)}, {x:i+1,y:valor}],
+                borderColor: color,
+                pointBackgroundColor: color,
+                pointBorderColor: color,
+                borderWidth: 2,
+                tension: 0
+            });
+        }
         grafico.update();
     }
 
