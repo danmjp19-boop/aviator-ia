@@ -59,6 +59,8 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script>
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -67,16 +69,33 @@ document.addEventListener("DOMContentLoaded", () => {
     const mensajeIA = document.getElementById("mensaje_ia");
     const horaDiv = document.getElementById("hora");
 
+    // === GRAFICO ===
     const grafCanvas = document.createElement("canvas");
     grafCanvas.id = "grafico";
-    grafCanvas.width = 360;
-    grafCanvas.height = 180;
     grafCanvas.style.background = "#000";
     grafCanvas.style.border = "2px solid cyan";
     grafCanvas.style.borderRadius = "10px";
     grafCanvas.style.marginTop = "15px";
+    grafCanvas.height = 180;
     document.querySelector(".container").appendChild(grafCanvas);
+
     const ctx = grafCanvas.getContext("2d");
+    let grafico = new Chart(ctx, {
+        type: "line",
+        data: { labels: [], datasets: [] },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { color: "cyan" }, grid: { color: "#222" } },
+                y: {
+                    ticks: { color: "cyan" },
+                    grid: { color: "#222" },
+                    min: -10, max: 10
+                }
+            }
+        }
+    });
 
     function actualizarHora() {
         const ahora = new Date();
@@ -93,6 +112,9 @@ document.addEventListener("DOMContentLoaded", () => {
     function _guardar() {
         const cuotaStr = display.innerText.trim();
         if (!cuotaStr) return;
+        const cuota = parseFloat(cuotaStr);
+        if (isNaN(cuota)) return;
+
         fetch("/guardar", {
             method: "POST",
             headers: {"Content-Type":"application/x-www-form-urlencoded"},
@@ -100,19 +122,16 @@ document.addEventListener("DOMContentLoaded", () => {
         })
         .then(r=>r.json())
         .then(d=>{
-            if (d.error) alert(d.error);
-            else {
-                display.innerText = "";
-                const span = document.createElement("span");
-                span.innerText = parseFloat(cuotaStr).toFixed(2);
-                historialDiv.appendChild(span);
-                if (historialDiv.children.length > 100) historialDiv.removeChild(historialDiv.children[0]);
-                historialDiv.scrollLeft = historialDiv.scrollWidth;
-                mensajeIA.innerText = (parseFloat(cuotaStr) >= 2) ? "📈 Tendencia al alza (morada)" : "📉 Tendencia a la baja (azul)";
-                dibujarGrafico();
-            }
-        })
-        .catch(err=>{ console.error(err); alert("Error al guardar."); });
+            display.innerText = "";
+            mensajeIA.innerText = (d.prediccion && d.prediccion!=="clear") ? d.prediccion : "";
+
+            const span = document.createElement("span");
+            span.innerText = cuota.toFixed(2);
+            historialDiv.appendChild(span);
+            if (historialDiv.children.length > 100) historialDiv.removeChild(historialDiv.children[0]);
+            historialDiv.scrollLeft = historialDiv.scrollWidth;
+            actualizarGrafico();
+        });
     }
 
     function _deshacer() {
@@ -121,9 +140,8 @@ document.addEventListener("DOMContentLoaded", () => {
         .then(()=>{
             if (historialDiv.children.length > 0) historialDiv.removeChild(historialDiv.lastChild);
             mensajeIA.innerText = "";
-            dibujarGrafico();
-        })
-        .catch(err=>{ console.error(err); alert("Error al deshacer."); });
+            actualizarGrafico();
+        });
     }
 
     function _limpiarPantalla() {
@@ -134,38 +152,47 @@ document.addEventListener("DOMContentLoaded", () => {
             historialDiv.innerHTML = "";
             mensajeIA.innerText = "";
             display.innerText = "";
-            ctx.clearRect(0,0,grafCanvas.width,grafCanvas.height);
+            grafico.data.labels = [];
+            grafico.data.datasets = [];
+            grafico.update();
             alert("✅ Pantalla e historial reiniciados.");
-        })
-        .catch(err=>{ console.error(err); alert("Error al limpiar."); });
+        });
     }
 
-    function dibujarGrafico() {
+    let y = 0;
+    function actualizarGrafico() {
         const cuotas = Array.from(historialDiv.children).map(s=>parseFloat(s.innerText));
-        ctx.clearRect(0,0,grafCanvas.width,grafCanvas.height);
-        ctx.beginPath();
-        ctx.moveTo(10,90);
-        let y = 90;
-        const paso = grafCanvas.width / (cuotas.length + 1);
-        cuotas.forEach((v,i)=>{
-            let color = (v>=2) ? "magenta" : "cyan";
-            ctx.strokeStyle = color;
-            y += (v>=2) ? -15 : 15;
-            ctx.lineTo(10 + paso*(i+1), y);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.arc(10 + paso*(i+1), y, 3, 0, Math.PI*2);
-            ctx.fillStyle = "white";
-            ctx.fill();
-            ctx.beginPath();
-            ctx.moveTo(10 + paso*(i+1), y);
+        const ultimas = cuotas.slice(-25);
+        grafico.data.labels = ultimas.map((_,i)=>i+1);
+        grafico.data.datasets = [];
+
+        let data = [];
+        y = 0;
+        ultimas.forEach((c,i)=>{
+            if (c < 2) y -= 1; else y += 1;
+            data.push(y);
         });
+
+        grafico.data.datasets.push({
+            data,
+            borderColor: "#a0f",
+            borderWidth: 2,
+            pointRadius: 4,
+            pointBackgroundColor: ultimas.map(c=>c<2?"#0ff":"#a0f"),
+            fill: false,
+            tension: 0
+        });
+
+        grafico.update();
     }
 
     window.tecla = _tecla;
     window.guardar = _guardar;
     window.deshacer = _deshacer;
     window.limpiarPantalla = _limpiarPantalla;
+
+    actualizarGrafico();
+
 });
 </script>
 </body>
