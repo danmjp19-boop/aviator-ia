@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>✈️ Aviator Pronosticador IA</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
     body {
         background-color: #000;
@@ -22,117 +23,52 @@
         border-radius: 15px;
         box-shadow: 0 0 15px cyan;
     }
-    #hora {
-        font-size: 1.2em;
-        color: #0ff;
-        margin-bottom: 10px;
-        letter-spacing: 1px;
-    }
+    #hora { font-size: 1.2em; color: #0ff; margin-bottom: 10px; letter-spacing: 1px; }
     #display {
-        background: #000;
-        color: #0ff;
-        font-size: 2em;
-        padding: 10px;
-        border: 2px solid cyan;
-        border-radius: 10px;
-        min-height: 40px;
-        margin-bottom: 15px;
+        background: #000; color: #0ff; font-size: 2em; padding: 10px;
+        border: 2px solid cyan; border-radius: 10px; min-height: 40px; margin-bottom: 15px;
     }
     .teclado button {
-        width: 30%;
-        margin: 5px;
-        padding: 10px;
-        font-size: 1.2em;
-        border-radius: 10px;
-        background: #022;
-        color: cyan;
-        border: 1px solid #0ff;
-        cursor: pointer;
+        width: 30%; margin: 5px; padding: 10px; font-size: 1.2em;
+        border-radius: 10px; background: #022; color: cyan; border: 1px solid #0ff; cursor: pointer;
     }
-    .acciones {
-        margin-top: 10px;
-        display: flex;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 10px;
-    }
+    .acciones { margin-top: 10px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
     .acciones button {
-        flex: 1;
-        padding: 10px;
-        border-radius: 10px;
-        background: cyan;
-        color: black;
-        font-weight: bold;
-        cursor: pointer;
+        flex: 1; padding: 10px; border-radius: 10px; background: cyan; color: black; font-weight: bold; cursor: pointer;
     }
     .limpiar {
-        background: #f00;
-        color: white;
-        margin-top: 20px;
-        width: 100%;
-        font-weight: bold;
-        border: 2px solid #faa;
-        transition: all 0.2s ease;
+        background: #f00; color: white; margin-top: 20px; width: 100%;
+        font-weight: bold; border: 2px solid #faa; transition: all 0.2s ease;
     }
-    .limpiar:hover {
-        background: #c00;
-        box-shadow: 0 0 10px red;
-    }
-    #mensaje_ia {
-        margin-top: 15px;
-        font-size: 1.2em;
-        color: lime;
-        min-height: 1.5em;
-        transition: opacity .3s ease;
-    }
+    .limpiar:hover { background: #c00; box-shadow: 0 0 10px red; }
+    #mensaje_ia { margin-top: 15px; font-size: 1.2em; color: lime; min-height: 1.5em; transition: opacity .3s ease; }
     #historial {
-        margin-top: 15px;
-        display: flex;
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        overflow-y: hidden;
-        justify-content: flex-start;
-        gap: 6px;
-        scrollbar-width: thin;
-        scroll-behavior: smooth;
-        padding-bottom: 10px;
-        border-top: 1px solid cyan;
-        border-bottom: 1px solid cyan;
+        margin-top: 15px; display: flex; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
+        justify-content: flex-start; gap: 6px; scrollbar-width: thin; scroll-behavior: smooth;
+        padding-bottom: 10px; border-top: 1px solid cyan; border-bottom: 1px solid cyan;
     }
     #historial span {
-        background: #033;
-        padding: 5px 10px;
-        border-radius: 5px;
-        color: #0ff;
-        white-space: nowrap;
-        flex-shrink: 0;
-        font-weight: bold;
+        background: #033; padding: 5px 10px; border-radius: 5px; color: #0ff;
+        white-space: nowrap; flex-shrink: 0; font-weight: bold;
     }
-    /* 🔹 Barra superior de usuario */
-    .user-bar {
-        margin-bottom: 10px;
-        text-align: center;
-        font-size: 0.95em;
-    }
-    .user-bar span {
-        color: #0ff;
-        font-weight: bold;
-    }
-    .user-bar a {
-        color: #ff5555;
-        text-decoration: none;
-        font-weight: bold;
-        margin-left: 8px;
-    }
-    .user-bar a:hover {
-        text-decoration: underline;
+    .user-bar { margin-bottom: 10px; text-align: center; font-size: 0.95em; }
+    .user-bar span { color: #0ff; font-weight: bold; }
+    .user-bar a { color: #ff5555; text-decoration: none; font-weight: bold; margin-left: 8px; }
+    .user-bar a:hover { text-decoration: underline; }
+
+    /* 🔹 Estilo del gráfico */
+    #grafico_tendencia {
+        margin-top: 15px;
+        background: #000;
+        border: 1px solid cyan;
+        border-radius: 10px;
+        padding: 10px;
     }
 </style>
 </head>
 <body>
 <h1>✈️ Aviator Pronosticador IA</h1>
 
-<!-- 🔹 Barra superior con usuario y cerrar sesión -->
 <div class="user-bar">
     <span>📧 {{ usuario }}</span> |
     <a href="/logout">Cerrar sesión</a>
@@ -165,11 +101,14 @@
     </div>
 
     <h2>Análisis 📊</h2>
-    <div id="resumen_analitico" 
+    <div id="resumen_analitico"
          style="background:#011; color:#0ff; border:1px solid cyan; border-radius:10px;
                 padding:10px; font-size:1em; margin-top:10px; text-align:left; white-space:pre-line;">
         Cargando análisis...
     </div>
+
+    <!-- 🔹 Nuevo gráfico -->
+    <canvas id="grafico_tendencia" height="200"></canvas>
 </div>
 
 <script>
@@ -177,26 +116,56 @@ const display = document.getElementById("display");
 const historialDiv = document.getElementById("historial");
 const mensajeIA = document.getElementById("mensaje_ia");
 const horaDiv = document.getElementById("hora");
+const ctx = document.getElementById('grafico_tendencia').getContext('2d');
+let cuotas = [];
+
+// 🔹 Configuración del gráfico
+const chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: [],
+        datasets: [{
+            label: 'Tendencia',
+            data: [],
+            borderColor: 'cyan',
+            backgroundColor: 'rgba(0,255,255,0.1)',
+            pointBackgroundColor: 'white',
+            pointBorderColor: 'cyan',
+            pointRadius: 4,
+            tension: 0.3
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            x: { ticks: { color: '#0ff' }, grid: { color: '#222' } },
+            y: { ticks: { color: '#0ff' }, grid: { color: '#333' } }
+        },
+        plugins: { legend: { labels: { color: '#0ff' } } }
+    }
+});
 
 function actualizarHora() {
     const ahora = new Date();
-    const horaStr = ahora.toLocaleTimeString('es-ES', {hour12: false});
-    horaDiv.innerText = "🕒 " + horaStr;
+    horaDiv.innerText = "🕒 " + ahora.toLocaleTimeString('es-ES', {hour12: false});
 }
-setInterval(actualizarHora, 1000);
-actualizarHora();
+setInterval(actualizarHora, 1000); actualizarHora();
 
 function tecla(t) {
-    if (t === "Borrar") {
-        display.innerText = display.innerText.slice(0, -1);
-    } else {
-        display.innerText += t;
-    }
+    if (t === "Borrar") display.innerText = display.innerText.slice(0, -1);
+    else display.innerText += t;
+}
+
+function actualizarGrafico() {
+    const ultimas = cuotas.slice(-30);
+    chart.data.labels = ultimas.map((_, i) => i + 1);
+    chart.data.datasets[0].data = ultimas;
+    chart.update();
 }
 
 function guardar() {
-    const cuota = display.innerText.trim();
-    if (!cuota) return;
+    const cuota = parseFloat(display.innerText.trim());
+    if (isNaN(cuota)) return;
 
     fetch("/guardar", {
         method: "POST",
@@ -205,15 +174,16 @@ function guardar() {
     })
     .then(r => r.json())
     .then(d => {
-        if (d.error) alert(d.error);
-        else {
+        if (!d.error) {
             display.innerText = "";
-            mensajeIA.innerText = (d.prediccion && d.prediccion !== "clear") ? d.prediccion : "";
+            mensajeIA.innerText = d.prediccion || "";
+            cuotas.push(cuota);
             const span = document.createElement("span");
-            span.innerText = parseFloat(cuota).toFixed(2);
+            span.innerText = cuota.toFixed(2);
             historialDiv.appendChild(span);
             if (historialDiv.children.length > 100) historialDiv.removeChild(historialDiv.children[0]);
             historialDiv.scrollLeft = historialDiv.scrollWidth;
+            actualizarGrafico();
         }
         actualizarAnalisis();
     });
@@ -222,40 +192,33 @@ function guardar() {
 function deshacer() {
     fetch("/borrar_ultimo", {method: "POST"})
     .then(() => {
-        if (historialDiv.children.length > 0)
-            historialDiv.removeChild(historialDiv.lastChild);
+        cuotas.pop();
+        if (historialDiv.children.length > 0) historialDiv.removeChild(historialDiv.lastChild);
         mensajeIA.innerText = "";
+        actualizarGrafico();
         actualizarAnalisis();
     });
 }
 
 function limpiarPantalla() {
-    const confirmar = confirm("⚠️ ¿Seguro que deseas borrar el historial visible y reiniciar la pantalla?\n\nEsto también reiniciará el análisis de la IA.");
-    if (!confirmar) return;
-
+    if (!confirm("⚠️ ¿Seguro que deseas borrar todo?")) return;
     fetch("/limpiar_todo", {method: "POST"})
-    .then(r => r.json())
     .then(() => {
+        cuotas = [];
         historialDiv.innerHTML = "";
         mensajeIA.innerText = "";
         display.innerText = "";
+        actualizarGrafico();
         actualizarAnalisis();
-        alert("✅ Pantalla e historial reiniciados correctamente.");
-    })
-    .catch(() => {
-        alert("⚠️ Error al intentar limpiar el historial.");
+        alert("✅ Reiniciado correctamente.");
     });
 }
 
 function actualizarAnalisis() {
     fetch("/analisis")
     .then(r => r.json())
-    .then(d => {
-        document.getElementById("resumen_analitico").innerText = d.resumen;
-    })
-    .catch(() => {
-        document.getElementById("resumen_analitico").innerText = "Error al obtener análisis.";
-    });
+    .then(d => document.getElementById("resumen_analitico").innerText = d.resumen)
+    .catch(() => document.getElementById("resumen_analitico").innerText = "Error al obtener análisis.");
 }
 
 actualizarAnalisis();
