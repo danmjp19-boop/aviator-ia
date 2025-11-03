@@ -122,17 +122,23 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function actualizarGrafico(){
-        const cuotas=Array.from(historialDiv.children).map(s=>parseFloat(s.innerText));
-        let data=[]; let valor=0;
-        cuotas.forEach(c=>{
-            if(c<2)valor-=1; else valor+=1;
-            data.push(valor);
-        });
-        grafico.data.labels=data.map((_,i)=>i+1);
-        grafico.data.datasets[0].data=data;
-        grafico.data.datasets[0].borderColor=data.map((v,i)=>cuotas[i]<2?"cyan":"magenta");
-        grafico.data.datasets[0].pointBackgroundColor=data.map((v,i)=>cuotas[i]<2?"cyan":"magenta");
-        grafico.update();
+    let cuotas = Array.from(historialDiv.children).map(s => parseFloat(s.innerText));
+    if (cuotas.length > 30) cuotas = cuotas.slice(-30); // 🔹 solo conserva los últimos 30 valores
+
+    let data = [];
+    let valor = 0;
+    cuotas.forEach(c => {
+        if (c < 2) valor -= 1; else valor += 1;
+        data.push(valor);
+    });
+
+    grafico.data.labels = data.map((_, i) => i + 1);
+    grafico.data.datasets[0].data = data;
+    grafico.data.datasets[0].borderColor = data.map((v, i) => cuotas[i] < 2 ? "cyan" : "magenta");
+    grafico.data.datasets[0].pointBackgroundColor = grafico.data.datasets[0].borderColor;
+    grafico.update();
+}
+
     }
 
     window.tecla=_tecla; window.guardar=_guardar; window.deshacer=_deshacer; window.limpiarPantalla=_limpiarPantalla;
