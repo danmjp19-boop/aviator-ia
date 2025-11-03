@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>  
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -71,16 +71,23 @@ document.addEventListener("DOMContentLoaded", () => {
     const horaDiv = document.getElementById("hora");
     const ctx = document.getElementById("grafico").getContext("2d");
 
+    function colorPorCuota(cuota) {
+        if (cuota < 2) return "blue";
+        if (cuota < 10) return "purple";
+        return "pink";
+    }
+
     let grafico = new Chart(ctx, {
         type: "line",
-        data: { labels: [], datasets: [{ label: "Tendencia", data: [], borderColor: "cyan", borderWidth: 2, pointRadius: 4, pointBackgroundColor: "cyan", tension: 0 }] },
+        data: { labels: [], datasets: [{ data: [] }] },
         options: {
             responsive: true,
             plugins: { legend: { display: false } },
             scales: {
                 x: { ticks: { color: "cyan" }, grid: { color: "#222" } },
                 y: { min: -5, max: 5, ticks: { color: "cyan" }, grid: { color: "#222" } }
-            }
+            },
+            elements: { line: { borderWidth: 3, tension: 0 }, point: { radius: 4 } }
         }
     });
 
@@ -91,12 +98,6 @@ document.addEventListener("DOMContentLoaded", () => {
     actualizarHora();
 
     function _tecla(t){ if(t==="Borrar")display.innerText=display.innerText.slice(0,-1); else display.innerText+=t; }
-
-    function colorPorCuota(cuota) {
-        if (cuota < 2) return "blue";
-        if (cuota < 10) return "purple";
-        return "pink";
-    }
 
     function _guardar(){
         const cuota=parseFloat(display.innerText.trim());
@@ -110,36 +111,55 @@ document.addEventListener("DOMContentLoaded", () => {
             span.innerText=cuota.toFixed(2);
             span.style.color=colorPorCuota(cuota);
             historialDiv.appendChild(span);
-            if(historialDiv.children.length>100)historialDiv.removeChild(historialDiv.children[0]);
+            if(historialDiv.children.length>30)historialDiv.removeChild(historialDiv.children[0]);
             historialDiv.scrollLeft=historialDiv.scrollWidth;
             actualizarGrafico();
         });
     }
 
     function _deshacer(){
-        fetch("/borrar_ultimo",{method:"POST"}).then(()=>{ if(historialDiv.lastChild)historialDiv.removeChild(historialDiv.lastChild); actualizarGrafico(); mensajeIA.innerText=""; });
+        fetch("/borrar_ultimo",{method:"POST"}).then(()=>{ 
+            if(historialDiv.lastChild)historialDiv.removeChild(historialDiv.lastChild);
+            actualizarGrafico(); mensajeIA.innerText="";
+        });
     }
 
     function _limpiarPantalla(){
         if(!confirm("⚠️ ¿Seguro que deseas borrar el historial y reiniciar la pantalla?"))return;
-        fetch("/limpiar_todo",{method:"POST"}).then(()=>{ historialDiv.innerHTML=""; mensajeIA.innerText=""; display.innerText=""; grafico.data.labels=[]; grafico.data.datasets[0].data=[]; grafico.update(); alert("✅ Pantalla e historial reiniciados."); });
+        fetch("/limpiar_todo",{method:"POST"}).then(()=>{ 
+            historialDiv.innerHTML=""; mensajeIA.innerText=""; display.innerText="";
+            grafico.data.datasets=[{data:[]}]; grafico.update(); 
+            alert("✅ Pantalla e historial reiniciados."); 
+        });
     }
 
     function actualizarGrafico(){
-        const cuotas=Array.from(historialDiv.children).map(s=>parseFloat(s.innerText));
-        let data=[]; let valor=0;
-        cuotas.forEach(c=>{
-            if(c<2)valor-=1; else valor+=1;
+        const cuotas = Array.from(historialDiv.children).map(s=>parseFloat(s.innerText));
+        const colores = cuotas.map(c => colorPorCuota(c));
+        let data = []; let valor = 0;
+
+        cuotas.forEach(c => {
+            if(c < 2) valor -= 1; else valor += 1;
             data.push(valor);
         });
-        grafico.data.labels=data.map((_,i)=>i+1);
-        grafico.data.datasets[0].data=data;
-        grafico.data.datasets[0].borderColor=cuotas.map(c=>colorPorCuota(c));
-        grafico.data.datasets[0].pointBackgroundColor=cuotas.map(c=>colorPorCuota(c));
+
+        grafico.data.labels = data.map((_,i)=>i+1);
+        grafico.data.datasets = [{
+            data: data,
+            borderWidth: 3,
+            tension: 0,
+            segment: {
+                borderColor: ctx => colorPorCuota(cuotas[ctx.p0DataIndex]),
+            },
+            pointBackgroundColor: colores
+        }];
         grafico.update();
     }
 
-    window.tecla=_tecla; window.guardar=_guardar; window.deshacer=_deshacer; window.limpiarPantalla=_limpiarPantalla;
+    window.tecla=_tecla; 
+    window.guardar=_guardar; 
+    window.deshacer=_deshacer; 
+    window.limpiarPantalla=_limpiarPantalla;
     actualizarGrafico();
 });
 </script>
