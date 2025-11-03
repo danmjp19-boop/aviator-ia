@@ -1,187 +1,3 @@
-<!DOCTYPE html>  
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>✈️ Aviator Pronosticador IA</title>
-<style>
-    body {
-        background-color: #000;
-        color: cyan;
-        font-family: Arial, sans-serif;
-        text-align: center;
-        margin: 0;
-        padding: 20px;
-    }
-    h1 { color: #00ffff; }
-    .container {
-        max-width: 400px;
-        margin: 0 auto;
-        background: #111;
-        padding: 20px;
-        border-radius: 15px;
-        box-shadow: 0 0 15px cyan;
-    }
-    #hora {
-        font-size: 1.2em;
-        color: #0ff;
-        margin-bottom: 10px;
-        letter-spacing: 1px;
-    }
-    #display {
-        background: #000;
-        color: #0ff;
-        font-size: 2em;
-        padding: 10px;
-        border: 2px solid cyan;
-        border-radius: 10px;
-        min-height: 40px;
-        margin-bottom: 15px;
-    }
-    .teclado button {
-        width: 30%;
-        margin: 5px;
-        padding: 10px;
-        font-size: 1.2em;
-        border-radius: 10px;
-        background: #022;
-        color: cyan;
-        border: 1px solid #0ff;
-        cursor: pointer;
-    }
-    .acciones {
-        margin-top: 10px;
-        display: flex;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 10px;
-    }
-    .acciones button {
-        flex: 1;
-        padding: 10px;
-        border-radius: 10px;
-        background: cyan;
-        color: black;
-        font-weight: bold;
-        cursor: pointer;
-    }
-    .limpiar {
-        background: #f00;
-        color: white;
-        margin-top: 20px;
-        width: 100%;
-        font-weight: bold;
-        border: 2px solid #faa;
-        transition: all 0.2s ease;
-    }
-    .limpiar:hover {
-        background: #c00;
-        box-shadow: 0 0 10px red;
-    }
-    #mensaje_ia {
-        margin-top: 15px;
-        font-size: 1.2em;
-        color: lime;
-        min-height: 1.5em;
-        opacity: 0;
-        transition: opacity .5s ease;
-    }
-    #historial {
-        margin-top: 15px;
-        display: flex;
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        overflow-y: hidden;
-        justify-content: flex-start;
-        gap: 6px;
-        scrollbar-width: thin;
-        scroll-behavior: smooth;
-        padding-bottom: 10px;
-        border-top: 1px solid cyan;
-        border-bottom: 1px solid cyan;
-    }
-    #historial span {
-        background: #033;
-        padding: 5px 10px;
-        border-radius: 5px;
-        color: #0ff;
-        white-space: nowrap;
-        flex-shrink: 0;
-        font-weight: bold;
-    }
-    .user-bar {
-        margin-bottom: 10px;
-        text-align: center;
-        font-size: 0.95em;
-    }
-    .user-bar span {
-        color: #0ff;
-        font-weight: bold;
-    }
-    .user-bar a {
-        color: #ff5555;
-        text-decoration: none;
-        font-weight: bold;
-        margin-left: 8px;
-    }
-    .user-bar a:hover {
-        text-decoration: underline;
-    }
-    .grafico-container {
-        margin-top: 20px;
-        background: #000;
-        border: 2px solid cyan;
-        border-radius: 10px;
-        padding: 10px;
-    }
-</style>
-</head>
-<body>
-<h1>✈️ Aviator Pronosticador IA</h1>
-
-<div class="user-bar">
-    <span>📧 {{ usuario }}</span> |
-    <a href="/logout">Cerrar sesión</a>
-</div>
-
-<div class="container">
-    <div id="hora"></div>
-    <div id="display"></div>
-
-    <div class="teclado">
-        {% for n in [1,2,3,4,5,6,7,8,9,'.',0,'Borrar'] %}
-            <button onclick="tecla('{{n}}')">{{n}}</button>
-        {% endfor %}
-    </div>
-
-    <div class="acciones">
-        <button onclick="guardar()">Ingresar</button>
-        <button onclick="deshacer()">↩️ Deshacer</button>
-    </div>
-
-    <button class="limpiar" onclick="limpiarPantalla()">🧹 Limpiar Pantalla</button>
-
-    <div id="mensaje_ia"></div>
-
-    <div class="grafico-container">
-        <canvas id="grafico" height="160"></canvas>
-    </div>
-
-    <h2>Historial</h2>
-    <div id="historial">
-        {% for h in historial %}
-            <span>{{'%.2f'|format(h)}}</span>
-        {% endfor %}
-    </div>
-
-    <h2>Análisis 📊</h2>
-    <div id="resumen_analitico" 
-         style="background:#011; color:#0ff; border:1px solid cyan; border-radius:10px;
-                padding:10px; font-size:1em; margin-top:10px; text-align:left; white-space:pre-line;">
-        Cargando análisis...
-    </div>
-</div>
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 const display = document.getElementById("display");
@@ -199,22 +15,25 @@ let grafico = new Chart(ctx, {
             label: "Tendencia",
             data: [],
             borderColor: "cyan",
-            borderWidth: 2,
-            pointRadius: 5,
+            borderWidth: 1.5,
+            pointRadius: 4,
             pointBackgroundColor: [],
-            tension: 0 // líneas rectas
+            tension: 0
         }]
     },
     options: {
         responsive: true,
+        animation: false,
         scales: {
-            x: { ticks: { color: "#0ff" }, grid: { color: "#033" } },
+            x: {
+                ticks: { color: "#0ff" },
+                grid: { color: "#033" }
+            },
             y: { 
                 ticks: { color: "#0ff" },
-                grid: { color: ctx => ctx.tick.value === 0 ? 'cyan' : '#033' },
-                beginAtZero: false,
-                min: -2,
-                max: 2
+                grid: { color: ctx => ctx.tick.value === 0 ? 'red' : '#333' },
+                min: -1.5,
+                max: 1.5
             }
         },
         plugins: { legend: { labels: { color: "#0ff" } } }
@@ -245,7 +64,6 @@ function guardar() {
     .then(d => {
         display.innerText = "";
 
-        // 🔹 Mostrar predicción SOLO si la IA detecta algo
         if (d.prediccion && d.prediccion !== "clear") {
             mensajeIA.innerText = d.prediccion;
             mensajeIA.style.opacity = 1;
@@ -256,9 +74,8 @@ function guardar() {
 
         const valor = parseFloat(cuota);
         const referencia = 1.5;
-        const normalizado = valor - referencia;
+        const normalizado = Math.max(-1.5, Math.min((valor - referencia) / 1.5, 1.5));
 
-        // Colores según rango
         let color = valor < 2 ? "blue" : valor < 10 ? "purple" : "pink";
 
         datos.push(normalizado);
@@ -325,5 +142,3 @@ function actualizarAnalisis(){
 actualizarAnalisis();
 setInterval(actualizarAnalisis, 5000);
 </script>
-</body>
-</html>
