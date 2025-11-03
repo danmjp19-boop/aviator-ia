@@ -1,214 +1,165 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Aviator Pronosticador IA</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<title>✈️ Aviator Pronosticador IA</title>
 <style>
-body {
-    background-color: #000;
-    font-family: 'Orbitron', sans-serif;
-    color: cyan;
-    display: flex;
-    justify-content: center;
-    margin-top: 10px;
-}
-.container {
-    width: 280px;
-    background: #111;
-    border: 2px solid cyan;
-    border-radius: 15px;
-    padding: 10px;
-    box-shadow: 0 0 15px cyan;
-}
-.header {
-    text-align: center;
-    font-weight: bold;
-    color: cyan;
-    margin-bottom: 10px;
-}
-input[type="text"] {
-    width: 100%;
-    background: black;
-    border: 1px solid cyan;
-    color: cyan;
-    text-align: center;
-    font-size: 20px;
-    margin-bottom: 8px;
-    border-radius: 8px;
-}
-button {
-    background: black;
-    color: cyan;
-    border: 1px solid cyan;
-    border-radius: 8px;
-    width: 30%;
-    margin: 3px;
-    cursor: pointer;
-    font-weight: bold;
-}
-button:hover {
-    background: cyan;
-    color: black;
-}
-.boton-rojo {
-    background: red;
-    color: white;
-    width: 90%;
-    border: none;
-    border-radius: 8px;
-    margin: 5px auto;
-    display: block;
-}
-#historial {
-    display: flex;
-    overflow-x: auto;
-    border: 1px solid cyan;
-    border-radius: 8px;
-    padding: 3px;
-    margin: 10px 0;
-}
-#historial span {
-    margin: 3px;
-    padding: 3px 5px;
-    border: 1px solid cyan;
-    border-radius: 4px;
-}
-canvas {
-    margin-top: 10px;
-    border: 2px solid cyan;
-    border-radius: 10px;
-    background: black;
-}
+    body { background-color: #000; color: cyan; font-family: Arial, sans-serif; text-align: center; margin: 0; padding: 20px; }
+    h1 { color: #00ffff; }
+    .container { max-width: 400px; margin: 0 auto; background: #111; padding: 20px; border-radius: 15px; box-shadow: 0 0 15px cyan; }
+    #hora { font-size: 1.2em; color: #0ff; margin-bottom: 10px; letter-spacing: 1px; }
+    #display { background: #000; color: #0ff; font-size: 2em; padding: 10px; border: 2px solid cyan; border-radius: 10px; min-height: 40px; margin-bottom: 15px; }
+    .teclado button { width: 30%; margin: 5px; padding: 10px; font-size: 1.2em; border-radius: 10px; background: #022; color: cyan; border: 1px solid #0ff; cursor: pointer; }
+    .acciones { margin-top: 10px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+    .acciones button { flex: 1; padding: 10px; border-radius: 10px; background: cyan; color: black; font-weight: bold; cursor: pointer; }
+    .limpiar { background: #f00; color: white; margin-top: 20px; width: 100%; font-weight: bold; border: 2px solid #faa; transition: all 0.2s ease; }
+    .limpiar:hover { background: #c00; box-shadow: 0 0 10px red; }
+    #mensaje_ia { margin-top: 15px; font-size: 1.2em; color: lime; min-height: 1.5em; transition: opacity .3s ease; }
+    #historial { margin-top: 15px; display: flex; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; justify-content: flex-start; gap: 6px; scrollbar-width: thin; scroll-behavior: smooth; padding-bottom: 10px; border-top: 1px solid cyan; border-bottom: 1px solid cyan; }
+    #historial span { background: #033; padding: 5px 10px; border-radius: 5px; color: #0ff; white-space: nowrap; flex-shrink: 0; font-weight: bold; }
+    .user-bar { margin-bottom: 10px; text-align: center; font-size: 0.95em; }
+    .user-bar span { color: #0ff; font-weight: bold; }
+    .user-bar a { color: #ff5555; text-decoration: none; font-weight: bold; margin-left: 8px; }
+    .user-bar a:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
+<h1>✈️ Aviator Pronosticador IA</h1>
 
-<div class="container">
-    <div class="header">✈️ Aviator Pronosticador IA</div>
-
-    <input type="text" id="pantalla" readonly>
-
-    <div style="text-align:center;">
-        <button onclick="agregar('1')">1</button>
-        <button onclick="agregar('2')">2</button>
-        <button onclick="agregar('3')">3</button><br>
-        <button onclick="agregar('4')">4</button>
-        <button onclick="agregar('5')">5</button>
-        <button onclick="agregar('6')">6</button><br>
-        <button onclick="agregar('7')">7</button>
-        <button onclick="agregar('8')">8</button>
-        <button onclick="agregar('9')">9</button><br>
-        <button onclick="agregar('.')">.</button>
-        <button onclick="agregar('0')">0</button>
-        <button onclick="borrar()">←</button>
-    </div>
-
-    <div style="text-align:center; margin-top:5px;">
-        <button onclick="ingresar()">Ingresar</button>
-        <button onclick="deshacer()">Deshacer</button>
-    </div>
-
-    <button class="boton-rojo" onclick="limpiar()">🧹 Limpiar Pantalla</button>
-
-    <h3 style="text-align:center;">Historial</h3>
-    <div id="historial"></div>
-
-    <canvas id="grafico" height="180"></canvas>
+<div class="user-bar">
+    <span>📧 {{ usuario }}</span> |
+    <a href="/logout">Cerrar sesión</a>
 </div>
 
+<div class="container">
+    <div id="hora"></div>
+    <div id="display"></div>
+
+    <div class="teclado">
+        {% for n in [1,2,3,4,5,6,7,8,9,'.',0,'Borrar'] %}
+            <button onclick="tecla('{{n}}')">{{n}}</button>
+        {% endfor %}
+    </div>
+
+    <div class="acciones">
+        <button onclick="guardar()">Ingresar</button>
+        <button onclick="deshacer()">↩️ Deshacer</button>
+    </div>
+
+    <button class="limpiar" onclick="limpiarPantalla()">🧹 Limpiar Pantalla</button>
+
+    <div id="mensaje_ia"></div>
+
+    <h2>Historial</h2>
+    <div id="historial">
+        {% for h in historial %}
+            <span>{{'%.2f'|format(h)}}</span>
+        {% endfor %}
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-const ctx = document.getElementById("grafico").getContext("2d");
-let grafico = new Chart(ctx, {
-    type: "line",
-    data: {
-        labels: [],
-        datasets: [{
+document.addEventListener("DOMContentLoaded", () => {
+    const display = document.getElementById("display");
+    const historialDiv = document.getElementById("historial");
+    const mensajeIA = document.getElementById("mensaje_ia");
+    const horaDiv = document.getElementById("hora");
+
+    const grafCanvas = document.createElement("canvas");
+    grafCanvas.id = "grafico";
+    grafCanvas.style.background = "#000";
+    grafCanvas.style.border = "2px solid cyan";
+    grafCanvas.style.borderRadius = "10px";
+    grafCanvas.style.marginTop = "15px";
+    grafCanvas.height = 180;
+    document.querySelector(".container").appendChild(grafCanvas);
+
+    const ctx = grafCanvas.getContext("2d");
+    let grafico = new Chart(ctx, {
+        type: "line",
+        data: { labels: [], datasets: [{
             label: "Tendencia",
             data: [],
-            borderColor: "#00ffff",
+            borderColor: "cyan",
             borderWidth: 2,
-            pointBackgroundColor: "#fff",
+            tension: 0,
             pointRadius: 4,
-            pointBorderColor: "#0ff",
-            tension: 0 // 🔹 sin curvas
-        }]
-    },
-    options: {
-        responsive: true,
-        animation: false,
-        plugins: {
-            legend: {
-                labels: { color: "#0ff" }
-            }
-        },
-        scales: {
-            x: {
-                ticks: { color: "#0ff" },
-                grid: { color: "#222" }
-            },
-            y: {
-                ticks: { color: "#0ff" },
-                grid: { color: "orange" },
-                min: -1.5,
-                max: 1.5
+            pointBackgroundColor: "white"
+        }]},
+        options: {
+            responsive: true,
+            plugins: { legend: { labels: { color: "cyan" } } },
+            scales: {
+                x: { ticks: { color: "cyan" }, grid: { color: "#222" } },
+                y: { 
+                    ticks: { color: "cyan" },
+                    grid: { color: "orange" },
+                    min: -1.5,
+                    max: 1.5,
+                    border: { color: "red" }
+                }
             }
         }
+    });
+
+    function actualizarHora() {
+        horaDiv.innerText = "🕒 " + new Date().toLocaleTimeString('es-ES', {hour12:false});
     }
-});
+    setInterval(actualizarHora, 1000); actualizarHora();
 
-function agregar(valor) {
-    document.getElementById("pantalla").value += valor;
-}
+    function _tecla(t){ if(t==="Borrar")display.innerText=display.innerText.slice(0,-1); else display.innerText+=t; }
 
-function borrar() {
-    let p = document.getElementById("pantalla");
-    p.value = p.value.slice(0, -1);
-}
+    function _guardar(){
+        const cuota=display.innerText.trim();
+        if(!cuota)return;
+        fetch("/guardar",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({cuota:cuota})})
+        .then(r=>r.json()).then(d=>{
+            if(!d.error){
+                const span=document.createElement("span");
+                span.innerText=parseFloat(cuota).toFixed(2);
+                historialDiv.appendChild(span);
+                display.innerText="";
+                actualizarGrafico();
+            }
+        });
+    }
 
-function ingresar() {
-    let val = document.getElementById("pantalla").value;
-    if (val) {
-        let span = document.createElement("span");
-        span.textContent = val;
-        document.getElementById("historial").appendChild(span);
-        document.getElementById("pantalla").value = "";
+    function _deshacer(){
+        if(historialDiv.lastChild) historialDiv.removeChild(historialDiv.lastChild);
         actualizarGrafico();
     }
-}
 
-function deshacer() {
-    let h = document.getElementById("historial");
-    if (h.lastChild) h.removeChild(h.lastChild);
+    function _limpiarPantalla(){
+        if(!confirm("¿Seguro que deseas limpiar todo?"))return;
+        historialDiv.innerHTML="";
+        display.innerText="";
+        grafico.data.labels=[];
+        grafico.data.datasets[0].data=[];
+        grafico.update();
+    }
+
+    function actualizarGrafico(){
+        const datos = Array.from(historialDiv.children).map(s=>parseFloat(s.innerText));
+        grafico.data.labels = datos.map((_,i)=>i+1);
+
+        let valores = datos.map((v,i)=>{
+            let base = (i%2===0?-1:1)*(1 - (i*0.1));
+            return base.toFixed(2);
+        });
+
+        grafico.data.datasets[0].data = valores;
+        grafico.update();
+    }
+
+    window.tecla=_tecla;
+    window.guardar=_guardar;
+    window.deshacer=_deshacer;
+    window.limpiarPantalla=_limpiarPantalla;
+
     actualizarGrafico();
-}
-
-function limpiar() {
-    if (confirm("¿Seguro que deseas limpiar la pantalla?")) {
-        document.getElementById("pantalla").value = "";
-        document.getElementById("historial").innerHTML = "";
-        actualizarGrafico();
-    }
-}
-
-function actualizarGrafico() {
-    const datos = Array.from(document.querySelectorAll("#historial span"))
-        .map(s => parseFloat(s.innerText));
-
-    grafico.data.labels = datos.map((_, i) => i + 1);
-
-    // 🔹 Representación de líneas diagonales con eje 0 en el medio
-    let normalizados = [];
-    for (let i = 0; i < datos.length; i++) {
-        let dir = (i % 2 === 0 ? -1 : 1);
-        normalizados.push(dir * (Math.abs(i % 4 - 1) * 0.5));
-    }
-
-    grafico.data.datasets[0].data = normalizados;
-    grafico.update();
-}
+});
 </script>
 </body>
 </html>
