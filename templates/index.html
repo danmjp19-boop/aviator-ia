@@ -1,4 +1,4 @@
-<!DOCTYPE html>  
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -83,8 +83,7 @@
         font-size: 1.2em;
         color: lime;
         min-height: 1.5em;
-        opacity: 0;
-        transition: opacity .5s ease;
+        transition: opacity .3s ease;
     }
     #historial {
         margin-top: 15px;
@@ -109,6 +108,7 @@
         flex-shrink: 0;
         font-weight: bold;
     }
+    /* 🔹 Barra superior de usuario */
     .user-bar {
         margin-bottom: 10px;
         text-align: center;
@@ -127,18 +127,12 @@
     .user-bar a:hover {
         text-decoration: underline;
     }
-    .grafico-container {
-        margin-top: 20px;
-        background: #000;
-        border: 2px solid cyan;
-        border-radius: 10px;
-        padding: 10px;
-    }
 </style>
 </head>
 <body>
 <h1>✈️ Aviator Pronosticador IA</h1>
 
+<!-- 🔹 Barra superior con usuario y cerrar sesión -->
 <div class="user-bar">
     <span>📧 {{ usuario }}</span> |
     <a href="/logout">Cerrar sesión</a>
@@ -163,10 +157,6 @@
 
     <div id="mensaje_ia"></div>
 
-    <div class="grafico-container">
-        <canvas id="grafico" height="160"></canvas>
-    </div>
-
     <h2>Historial</h2>
     <div id="historial">
         {% for h in historial %}
@@ -182,55 +172,26 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-window.onload = () => {
 const display = document.getElementById("display");
 const historialDiv = document.getElementById("historial");
 const mensajeIA = document.getElementById("mensaje_ia");
 const horaDiv = document.getElementById("hora");
-const ctx = document.getElementById("grafico").getContext("2d");
-
-let datos = [];
-let grafico = new Chart(ctx, {
-    type: "line",
-    data: {
-        labels: [],
-        datasets: [{
-            label: "Tendencia",
-            data: [],
-            borderColor: "cyan",
-            borderWidth: 2,
-            pointRadius: 5,
-            pointBackgroundColor: [],
-            tension: 0
-        }]
-    },
-    options: {
-        responsive: true,
-        scales: {
-            x: { ticks: { color: "#0ff" }, grid: { color: "#033" } },
-            y: { 
-                ticks: { color: "#0ff" },
-                grid: { color: ctx => ctx.tick.value === 0 ? 'cyan' : '#033' },
-                beginAtZero: false,
-                min: -2,
-                max: 2
-            }
-        },
-        plugins: { legend: { labels: { color: "#0ff" } } }
-    }
-});
 
 function actualizarHora() {
-    horaDiv.innerText = "🕒 " + new Date().toLocaleTimeString('es-ES', {hour12:false});
+    const ahora = new Date();
+    const horaStr = ahora.toLocaleTimeString('es-ES', {hour12: false});
+    horaDiv.innerText = "🕒 " + horaStr;
 }
 setInterval(actualizarHora, 1000);
 actualizarHora();
 
 function tecla(t) {
-    if (t === "Borrar") display.innerText = display.innerText.slice(0, -1);
-    else display.innerText += t;
+    if (t === "Borrar") {
+        display.innerText = display.innerText.slice(0, -1);
+    } else {
+        display.innerText += t;
+    }
 }
 
 function guardar() {
@@ -244,85 +205,61 @@ function guardar() {
     })
     .then(r => r.json())
     .then(d => {
-        display.innerText = "";
-
-        if (d.prediccion && d.prediccion !== "clear") {
-            mensajeIA.innerText = d.prediccion;
-            mensajeIA.style.opacity = 1;
-        } else {
-            mensajeIA.innerText = "";
-            mensajeIA.style.opacity = 0;
+        if (d.error) alert(d.error);
+        else {
+            display.innerText = "";
+            mensajeIA.innerText = (d.prediccion && d.prediccion !== "clear") ? d.prediccion : "";
+            const span = document.createElement("span");
+            span.innerText = parseFloat(cuota).toFixed(2);
+            historialDiv.appendChild(span);
+            if (historialDiv.children.length > 100) historialDiv.removeChild(historialDiv.children[0]);
+            historialDiv.scrollLeft = historialDiv.scrollWidth;
         }
-
-        const valor = parseFloat(cuota);
-        const referencia = 1.5;
-        const normalizado = valor - referencia;
-        let color = valor < 2 ? "blue" : valor < 10 ? "purple" : "pink";
-
-        datos.push(normalizado);
-        grafico.data.labels.push(datos.length);
-        grafico.data.datasets[0].data.push(normalizado);
-        grafico.data.datasets[0].pointBackgroundColor.push(color);
-        grafico.update();
-
-        const span = document.createElement("span");
-        span.innerText = valor.toFixed(2);
-        historialDiv.appendChild(span);
-        historialDiv.scrollLeft = historialDiv.scrollWidth;
         actualizarAnalisis();
-    })
-    .catch(() => alert("⚠️ Error al conectar con el servidor."));
+    });
 }
 
 function deshacer() {
-    fetch("/borrar_ultimo", {method:"POST"}).then(()=>{
-        if (datos.length>0){
-            datos.pop();
-            grafico.data.labels.pop();
-            grafico.data.datasets[0].data.pop();
-            grafico.data.datasets[0].pointBackgroundColor.pop();
-            grafico.update();
-        }
-        if (historialDiv.children.length>0)
+    fetch("/borrar_ultimo", {method: "POST"})
+    .then(() => {
+        if (historialDiv.children.length > 0)
             historialDiv.removeChild(historialDiv.lastChild);
         mensajeIA.innerText = "";
-        mensajeIA.style.opacity = 0;
         actualizarAnalisis();
     });
 }
 
-function limpiarPantalla(){
-    if(!confirm("⚠️ ¿Seguro que deseas borrar todo y reiniciar?")) return;
-    fetch("/limpiar_todo",{method:"POST"})
-    .then(()=> {
-        historialDiv.innerHTML="";
-        display.innerText="";
-        mensajeIA.innerText="";
-        mensajeIA.style.opacity=0;
-        datos=[];
-        grafico.data.labels=[];
-        grafico.data.datasets[0].data=[];
-        grafico.data.datasets[0].pointBackgroundColor=[];
-        grafico.update();
-        alert("✅ Pantalla e historial reiniciados.");
+function limpiarPantalla() {
+    const confirmar = confirm("⚠️ ¿Seguro que deseas borrar el historial visible y reiniciar la pantalla?\n\nEsto también reiniciará el análisis de la IA.");
+    if (!confirmar) return;
+
+    fetch("/limpiar_todo", {method: "POST"})
+    .then(r => r.json())
+    .then(() => {
+        historialDiv.innerHTML = "";
+        mensajeIA.innerText = "";
+        display.innerText = "";
         actualizarAnalisis();
+        alert("✅ Pantalla e historial reiniciados correctamente.");
+    })
+    .catch(() => {
+        alert("⚠️ Error al intentar limpiar el historial.");
     });
 }
 
-function actualizarAnalisis(){
+function actualizarAnalisis() {
     fetch("/analisis")
-    .then(r=>r.json())
-    .then(d=>{
+    .then(r => r.json())
+    .then(d => {
         document.getElementById("resumen_analitico").innerText = d.resumen;
     })
-    .catch(()=>{
+    .catch(() => {
         document.getElementById("resumen_analitico").innerText = "Error al obtener análisis.";
     });
 }
 
 actualizarAnalisis();
 setInterval(actualizarAnalisis, 5000);
-};
 </script>
 </body>
 </html>
