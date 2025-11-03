@@ -58,12 +58,7 @@
         {% endfor %}
     </div>
 
-    <h2>Análisis 📊</h2>
-    <div id="resumen_analitico" 
-         style="background:#011; color:#0ff; border:1px solid cyan; border-radius:10px;
-                padding:10px; font-size:1em; margin-top:10px; text-align:left; white-space:pre-line;">
-        Cargando análisis...
-    </div>
+    <!-- Se removió el título "Análisis" y el recuadro de error pedido -->
 </div>
 
 <!-- Chart.js CDN -->
@@ -77,7 +72,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const mensajeIA = document.getElementById("mensaje_ia");
     const horaDiv = document.getElementById("hora");
 
-    // === GRAFICO ===
+    // === GRAFICO (se agrega al final del container) ===
     const grafCanvas = document.createElement("canvas");
     grafCanvas.id = "grafico";
     grafCanvas.style.background = "#000";
@@ -93,7 +88,7 @@ document.addEventListener("DOMContentLoaded", () => {
         data: {
             labels: [],
             datasets: [
-                { label: "Tendencia", data: [], borderColor: "white", backgroundColor: "rgba(0,255,255,0.12)", borderWidth: 2, tension: 0.3, pointBackgroundColor: "white", pointRadius: 4 },
+                { label: "Tendencia", data: [], borderColor: "white", backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 2, tension: 0.3, pointBackgroundColor: "white", pointRadius: 4 },
                 { label: "Soporte", data: [], borderColor: "lime", borderDash: [5,5], borderWidth: 1.5, pointRadius: 0 },
                 { label: "Resistencia", data: [], borderColor: "red", borderDash: [5,5], borderWidth: 1.5, pointRadius: 0 }
             ]
@@ -115,7 +110,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setInterval(actualizarHora, 1000);
     actualizarHora();
 
-    // FUNCIONES INTERNAS (y las exponemos abajo al window)
+    // FUNCIONES internas
     function _tecla(t) {
         if (t === "Borrar") display.innerText = display.innerText.slice(0, -1);
         else display.innerText += t;
@@ -142,7 +137,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 historialDiv.scrollLeft = historialDiv.scrollWidth;
                 actualizarGrafico();
             }
-            actualizarAnalisis();
         })
         .catch(err=>{ console.error(err); alert("Error al guardar."); });
     }
@@ -154,7 +148,6 @@ document.addEventListener("DOMContentLoaded", () => {
             if (historialDiv.children.length > 0) historialDiv.removeChild(historialDiv.lastChild);
             mensajeIA.innerText = "";
             actualizarGrafico();
-            actualizarAnalisis();
         })
         .catch(err=>{ console.error(err); alert("Error al deshacer."); });
     }
@@ -175,36 +168,23 @@ document.addEventListener("DOMContentLoaded", () => {
         .catch(err=>{ console.error(err); alert("Error al limpiar."); });
     }
 
-    function actualizarAnalisis() {
-        fetch("/analisis")
-        .then(r=>r.json())
-        .then(d=>{
-            document.getElementById("resumen_analitico").innerText = d.resumen;
-        })
-        .catch(()=> {
-            document.getElementById("resumen_analitico").innerText = "Error al obtener análisis.";
-        });
-    }
-    setInterval(actualizarAnalisis, 5000);
-
     function actualizarGrafico() {
         const cuotas = Array.from(historialDiv.children).map(s=>parseFloat(s.innerText));
         const ultimas = cuotas.slice(-25);
         grafico.data.labels = ultimas.map((_,i)=>i+1);
         grafico.data.datasets[0].data = ultimas;
-        grafico.data.datasets[1].data = new Array(ultimas.length).fill(1.0); // soporte 1.0
-        grafico.data.datasets[2].data = new Array(ultimas.length).fill(2.0); // resistencia 2.0
+        grafico.data.datasets[1].data = new Array(ultimas.length).fill(1.0); // soporte en 1.0
+        grafico.data.datasets[2].data = new Array(ultimas.length).fill(2.0); // resistencia en 2.0
         grafico.update();
     }
 
-    // Exponer las funciones que usa el HTML (onclick inline)
+    // Exponer para onclick inline
     window.tecla = _tecla;
     window.guardar = _guardar;
     window.deshacer = _deshacer;
     window.limpiarPantalla = _limpiarPantalla;
 
-    // Inicializar UI
-    actualizarAnalisis();
+    // Inicializa gráfico con historial ya renderizado (si existe)
     actualizarGrafico();
 
 }); // DOMContentLoaded
