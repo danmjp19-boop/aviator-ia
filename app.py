@@ -216,10 +216,16 @@ def login():
             return render_template("login.html", error="Credenciales inválidas")
         if user.expires < datetime.utcnow().date():
             return render_template("login.html", error="⏳ El tiempo de uso ha expirado")
-        if user.is_logged_in:
-            return render_template("login.html", error="⚠️ Este usuario ya tiene una sesión activa")
-        user.is_logged_in = True
-        db.session.commit()
+
+        # Permitir múltiples sesiones solo al admin
+if user.is_logged_in and user.email != "danmjp@gmail.com":
+    return render_template("login.html", error="⚠️ Este usuario ya tiene una sesión activa")
+
+# Si no es admin, marcar sesión activa
+if user.email != "danmjp@gmail.com":
+    user.is_logged_in = True
+db.session.commit()
+
         session["user"] = user.email
         return redirect(url_for("index"))
     return render_template("login.html")
