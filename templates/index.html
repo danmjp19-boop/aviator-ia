@@ -71,9 +71,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const horaDiv = document.getElementById("hora");
     const ctx = document.getElementById("grafico").getContext("2d");
 
+    function colorPorCuota(cuota) {
+        if (cuota < 2) return "blue";
+        if (cuota < 10) return "purple";
+        return "pink";
+    }
+
     let grafico = new Chart(ctx, {
         type: "line",
-        data: { labels: [], datasets: [{ label: "Tendencia", data: [], borderColor: "cyan", borderWidth: 2, pointRadius: 4, pointBackgroundColor: "cyan", tension: 0 }] },
+        data: { labels: [], datasets: [] },
         options: {
             responsive: true,
             plugins: { legend: { display: false } },
@@ -91,12 +97,6 @@ document.addEventListener("DOMContentLoaded", () => {
     actualizarHora();
 
     function _tecla(t){ if(t==="Borrar")display.innerText=display.innerText.slice(0,-1); else display.innerText+=t; }
-
-    function colorPorCuota(cuota) {
-        if (cuota < 2) return "blue";
-        if (cuota < 10) return "purple";
-        return "pink";
-    }
 
     function _guardar(){
         const cuota=parseFloat(display.innerText.trim());
@@ -122,20 +122,35 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function _limpiarPantalla(){
         if(!confirm("⚠️ ¿Seguro que deseas borrar el historial y reiniciar la pantalla?"))return;
-        fetch("/limpiar_todo",{method:"POST"}).then(()=>{ historialDiv.innerHTML=""; mensajeIA.innerText=""; display.innerText=""; grafico.data.labels=[]; grafico.data.datasets[0].data=[]; grafico.update(); alert("✅ Pantalla e historial reiniciados."); });
+        fetch("/limpiar_todo",{method:"POST"}).then(()=>{ historialDiv.innerHTML=""; mensajeIA.innerText=""; display.innerText=""; grafico.data.datasets=[]; grafico.update(); alert("✅ Pantalla e historial reiniciados."); });
     }
 
     function actualizarGrafico(){
         const cuotas=Array.from(historialDiv.children).map(s=>parseFloat(s.innerText));
-        let data=[]; let valor=0;
-        cuotas.forEach(c=>{
+        grafico.data.datasets = [];
+        let valor=0;
+        let data=[]; let colorActual=null;
+
+        cuotas.forEach((c,i)=>{
+            let color=colorPorCuota(c);
             if(c<2)valor-=1; else valor+=1;
-            data.push(valor);
+            if(!colorActual) colorActual=color;
+            if(color!==colorActual || i===cuotas.length-1){
+                data.push(valor);
+                grafico.data.datasets.push({
+                    label: "Tendencia",
+                    data: data.map((v,j)=>({x:j+1,y:v})),
+                    borderColor: colorActual,
+                    pointBackgroundColor: colorActual,
+                    borderWidth: 2,
+                    tension: 0
+                });
+                data=[valor];
+                colorActual=color;
+            } else {
+                data.push(valor);
+            }
         });
-        grafico.data.labels=data.map((_,i)=>i+1);
-        grafico.data.datasets[0].data=data;
-        grafico.data.datasets[0].borderColor=cuotas.map(c=>colorPorCuota(c));
-        grafico.data.datasets[0].pointBackgroundColor=cuotas.map(c=>colorPorCuota(c));
         grafico.update();
     }
 
