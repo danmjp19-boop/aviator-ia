@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session  
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session   
 import pandas as pd
 import os
 import numpy as np
@@ -218,13 +218,13 @@ def login():
             return render_template("login.html", error="⏳ El tiempo de uso ha expirado")
 
         # Permitir múltiples sesiones solo al admin
-if user.is_logged_in and user.email != "danmjp@gmail.com":
-    return render_template("login.html", error="⚠️ Este usuario ya tiene una sesión activa")
+        if user.is_logged_in and user.email != "danmjp@gmail.com":
+            return render_template("login.html", error="⚠️ Este usuario ya tiene una sesión activa")
 
-# Si no es admin, marcar sesión activa
-if user.email != "danmjp@gmail.com":
-    user.is_logged_in = True
-db.session.commit()
+        # Si no es admin, marcar sesión activa
+        if user.email != "danmjp@gmail.com":
+            user.is_logged_in = True
+            db.session.commit()
 
         session["user"] = user.email
         return redirect(url_for("index"))
