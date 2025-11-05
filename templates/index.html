@@ -8,17 +8,17 @@
 body{background:#000;color:cyan;font-family:Arial,sans-serif;text-align:center;margin:0;padding:20px;}
 h1{color:#00ffff;margin:6px 0;}
 .container{max-width:400px;margin:0 auto;background:#111;padding:20px;border-radius:15px;box-shadow:0 0 15px cyan;display:flex;flex-direction:column;align-items:center;}
-#hora-analisis{display:flex;justify-content:space-between;align-items:center;width:100%;margin-bottom:10px;}
-#hora{font-size:1.2em;color:#0ff;letter-spacing:1px;}
+#hora{font-size:1.2em;color:#0ff;margin-bottom:10px;}
 #analisisInput{width:120px;padding:5px;border:1px solid cyan;background:#000;color:cyan;border-radius:8px;text-align:center;}
 #analizarBtn{padding:6px 10px;background:cyan;color:#000;border:none;border-radius:8px;font-weight:bold;cursor:pointer;}
-#display{background:#000;color:#0ff;font-size:2em;padding:10px;border:2px solid cyan;border-radius:10px;min-height:40px;margin-bottom:15px;width:100%;}
+#display{background:#000;color:#0ff;font-size:2em;padding:10px;border:2px solid cyan;border-radius:10px;min-height:40px;margin-bottom:10px;width:100%;}
+.teclado{width:100%;display:flex;flex-wrap:wrap;justify-content:space-between;}
 .teclado button{width:30%;margin:5px;padding:10px;font-size:1.2em;border-radius:10px;background:#022;color:cyan;border:1px solid #0ff;cursor:pointer;}
 .acciones{margin-top:10px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;width:100%;}
 .acciones button{flex:1;padding:10px;border-radius:10px;background:cyan;color:black;font-weight:bold;cursor:pointer;}
 .limpiar{background:#f00;color:white;margin-top:20px;width:100%;font-weight:bold;border:2px solid #faa;}
 #graficoWrap{width:100%;height:260px;background:#000;border:2px solid cyan;border-radius:10px;padding:8px;margin-top:12px;overflow:hidden;}
-#graficoWrap canvas{width:100%!important;height:100%!important;display:block;touch-action:none;-ms-touch-action:none;}
+#graficoWrap canvas{width:100%!important;height:100%!important;display:block;}
 #mensaje_ia{margin-top:15px;font-size:1.2em;color:lime;min-height:1.5em;}
 #historial{margin-top:15px;display:flex;overflow-x:auto;gap:6px;padding-bottom:10px;border-top:1px solid cyan;border-bottom:1px solid cyan;width:100%;}
 #historial span{background:#033;padding:5px 10px;border-radius:5px;color:white;white-space:nowrap;font-weight:bold;}
@@ -77,12 +77,12 @@ h1{color:#00ffff;margin:6px 0;}
 </div>
 
 <div class="container">
-  <div id="hora-analisis">
-    <div id="hora"></div>
-    <div>
-      <input type="text" id="analisisInput" placeholder="1.84x 03:52:27">
-      <button id="analizarBtn">Iniciar</button>
-    </div>
+
+  <div id="hora">🕒 --:--:--</div>
+
+  <div>
+    <input type="text" id="analisisInput" placeholder="1.84x 03:52:27">
+    <button id="analizarBtn">Iniciar</button>
   </div>
 
   <div id="display"></div>
@@ -96,9 +96,18 @@ h1{color:#00ffff;margin:6px 0;}
   </div>
 
   <div class="teclado">
-    {% for n in [1,2,3,4,5,6,7,8,9,'.',0,'Borrar'] %}
-      <button onclick="tecla('{{n}}')">{{n}}</button>
-    {% endfor %}
+    <button onclick="tecla('1')">1</button>
+    <button onclick="tecla('2')">2</button>
+    <button onclick="tecla('3')">3</button>
+    <button onclick="tecla('4')">4</button>
+    <button onclick="tecla('5')">5</button>
+    <button onclick="tecla('6')">6</button>
+    <button onclick="tecla('7')">7</button>
+    <button onclick="tecla('8')">8</button>
+    <button onclick="tecla('9')">9</button>
+    <button onclick="tecla('.')">.</button>
+    <button onclick="tecla('0')">0</button>
+    <button onclick="tecla('Borrar')">Borrar</button>
   </div>
 
   <div class="acciones">
@@ -122,64 +131,81 @@ h1{color:#00ffff;margin:6px 0;}
   {% endfor %}
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1/dist/chartjs-plugin-zoom.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-document.addEventListener("DOMContentLoaded",()=>{
+const horaDiv=document.getElementById("hora");
+function actualizarHora(){horaDiv.textContent="🕒 "+new Date().toLocaleTimeString('es-ES',{hour12:false});}
+setInterval(actualizarHora,1000);actualizarHora();
 
-  const display=document.getElementById("display");
-  const historialDiv=document.getElementById("historial");
-  const mensajeIA=document.getElementById("mensaje_ia");
-  const horaDiv=document.getElementById("hora");
-  const input=document.getElementById("analisisInput");
-  const btn=document.getElementById("analizarBtn");
-  const graficoCtx=document.getElementById("grafico").getContext("2d");
+const display=document.getElementById("display");
+const historialDiv=document.getElementById("historial");
 
-  function colorPorCuota(c){if(c<2)return"blue";if(c<10)return"purple";return"pink";}
+function tecla(t){
+  if(t==="Borrar"){display.innerText=display.innerText.slice(0,-1);}
+  else{display.innerText+=t;}
+}
 
-  const referencePlugin={
-    id:'referenceLines',
-    afterDraw:chart=>{
-      const ctx=chart.ctx, area=chart.chartArea, yScale=chart.scales['y'];
-      const data=chart.data.datasets[0].data;
-      if(!data||data.length===0) return;
-      const maxVal=Math.max(...data), minVal=Math.min(...data);
-      const soporte=minVal, resistencia=maxVal;
-      const soporte2=soporte + (resistencia-soporte)*0.25;
-      const resistencia2=resistencia - (resistencia-soporte)*0.25;
-      const drawLine=(y,color,w=2,dash=[])=>{
-        const yPixel=yScale.getPixelForValue(y);
-        ctx.save();ctx.beginPath();ctx.setLineDash(dash);
-        ctx.moveTo(area.left,yPixel);ctx.lineTo(area.right,yPixel);
-        ctx.lineWidth=w;ctx.strokeStyle=color;ctx.stroke();ctx.restore();
-      };
-      drawLine(resistencia,'red',2,[]);
-      drawLine(resistencia2,'red',1,[6,4]);
-      drawLine(soporte2,'lime',1,[6,4]);
-      drawLine(soporte,'lime',2,[]);
-    }
-  };
+function guardar(){
+  const valor=parseFloat(display.innerText);
+  if(isNaN(valor))return;
+  const span=document.createElement("span");
+  span.textContent=valor.toFixed(2);
+  historialDiv.appendChild(span);
+  display.textContent="";
+}
 
-  function clampOrResetScales(chart){
-    try{
-      const y = chart.scales['y'];
-      if(!y) return;
-      let min = Number(y.min), max = Number(y.max);
-      if(!isFinite(min) || !isFinite(max) || Math.abs(max - min) < 0.05){chart.resetZoom();return;}
-      const data = chart.data.datasets[0].data || [];
-      const absMaxData = Math.max(1, Math.abs(Math.max(...data)), Math.abs(Math.min(...data)));
-      const limit = Math.max(5, absMaxData * 10);
-      if(min < -limit) min = -limit;
-      if(max > limit) max = limit;
-      if(min !== y.min || max !== y.max){chart.options.scales.y.min = min;chart.options.scales.y.max = max;chart.update('none');}
-    }catch(e){chart.resetZoom();}
+function deshacer(){
+  if(historialDiv.lastChild)historialDiv.removeChild(historialDiv.lastChild);
+}
+
+function limpiarPantalla(){
+  if(confirm("¿Limpiar todo?")){
+    historialDiv.innerHTML="";
+    display.textContent="";
   }
+}
 
-  const grafico=new Chart(graficoCtx,{
-    type:'line',
-    data:{labels:[],datasets:[{label:'Tendencia',data:[],borderColor:'cyan',borderWidth:2,pointRadius:5,pointBackgroundColor:[],tension:0}]},
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      interaction:{mode:'ne
+/* ---------- BLOQUE MT-2 ---------- */
+const intervalos=[
+  {h:0,m:0,s:42},
+  {h:0,m:1,s:33},
+  {h:0,m:2,s:18},
+  {h:0,m:2,s:49},
+  {h:0,m:3,s:30}
+];
+let tiempos=[],indexActual=0,timer=null;
+const span=document.getElementById('tiempoMT2');
+const input2=document.getElementById('semillaMT2');
+const btn2=document.getElementById('btnMT2');
+
+function parseHora(str){const[h,m,s]=str.split(':').map(Number);const d=new Date();d.setHours(h,m,s,0);return d;}
+function sumar(base,{h,m,s}){const n=new Date(base);n.setSeconds(n.getSeconds()+h*3600+m*60+s);return n;}
+function fmt(d){return d.toTimeString().split(' ')[0];}
+
+function actualizarMT2(titila){
+  if(indexActual>=tiempos.length){span.textContent="✅";span.style.color='cyan';return;}
+  span.textContent=fmt(tiempos[indexActual]);
+  span.style.color=titila?(span.style.color==='red'?'lime':'red'):'lime';
+}
+function verificarMT2(){
+  const ahora=new Date();
+  if(indexActual>=tiempos.length){clearInterval(timer);return;}
+  const objetivo=tiempos[indexActual];
+  const diff=(objetivo-ahora)/1000;
+  const titila=Math.abs(diff)<=10;
+  actualizarMT2(titila);
+  if(diff<=0)indexActual++;
+}
+function iniciarMT2(){
+  const val=input2.value.trim();
+  if(!val.match(/^\d{2}:\d{2}:\d{2}$/)){alert('Formato: HH:MM:SS');return;}
+  const base=parseHora(val);tiempos=[base];
+  for(let i=0;i<intervalos.length;i++)tiempos.push(sumar(tiempos[i],intervalos[i]));
+  indexActual=1;clearInterval(timer);
+  verificarMT2();timer=setInterval(verificarMT2,1000);
+}
+btn2.addEventListener('click',iniciarMT2);
+</script>
+</body>
+</html>
