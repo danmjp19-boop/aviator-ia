@@ -1,12 +1,32 @@
-<!-- MT-2 COMPACTO (pegar exactamente ANTES de <div class="teclado">, NO cambia nada más) -->
-<div id="mt2">
-  <input type="text" id="mt2_semilla" placeholder="04:33:58" aria-label="MT-2 semilla">
-  <button id="mt2_btn">▶</button>
-  <span id="mt2_tiempo">--:--:--</span>
-</div>
-
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>✈️ Aviator Pronosticador IA</title>
 <style>
-/* Estilos compactos para MT-2 — no tocan el resto */
+body{background:#000;color:cyan;font-family:Arial,sans-serif;text-align:center;margin:0;padding:20px;}
+h1{color:#00ffff;margin:6px 0;}
+.container{max-width:400px;margin:0 auto;background:#111;padding:20px;border-radius:15px;box-shadow:0 0 15px cyan;display:flex;flex-direction:column;align-items:center;}
+#hora-analisis{display:flex;justify-content:space-between;align-items:center;width:100%;margin-bottom:10px;}
+#hora{font-size:1.2em;color:#0ff;letter-spacing:1px;}
+#analisisInput{width:120px;padding:5px;border:1px solid cyan;background:#000;color:cyan;border-radius:8px;text-align:center;}
+#analizarBtn{padding:6px 10px;background:cyan;color:#000;border:none;border-radius:8px;font-weight:bold;cursor:pointer;}
+#display{background:#000;color:#0ff;font-size:2em;padding:10px;border:2px solid cyan;border-radius:10px;min-height:40px;margin-bottom:15px;width:100%;}
+.teclado button{width:30%;margin:5px;padding:10px;font-size:1.2em;border-radius:10px;background:#022;color:cyan;border:1px solid #0ff;cursor:pointer;}
+.acciones{margin-top:10px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;width:100%;}
+.acciones button{flex:1;padding:10px;border-radius:10px;background:cyan;color:black;font-weight:bold;cursor:pointer;}
+.limpiar{background:#f00;color:white;margin-top:20px;width:100%;font-weight:bold;border:2px solid #faa;}
+#graficoWrap{width:100%;height:260px;background:#000;border:2px solid cyan;border-radius:10px;padding:8px;margin-top:12px;overflow:hidden;}
+#graficoWrap canvas{width:100%!important;height:100%!important;display:block;touch-action:none;-ms-touch-action:none;}
+#mensaje_ia{margin-top:15px;font-size:1.2em;color:lime;min-height:1.5em;}
+#historial{margin-top:15px;display:flex;overflow-x:auto;gap:6px;padding-bottom:10px;border-top:1px solid cyan;border-bottom:1px solid cyan;width:100%;}
+#historial span{background:#033;padding:5px 10px;border-radius:5px;color:white;white-space:nowrap;font-weight:bold;}
+.user-bar{margin-bottom:10px;text-align:center;font-size:0.95em;}
+.user-bar span{color:#0ff;font-weight:bold;}
+.user-bar a{color:#ff5555;text-decoration:none;font-weight:bold;margin-left:8px;}
+.user-bar a:hover{text-decoration:underline;}
+/* Bloque MT-2 */
 #mt2{
   width:100%;
   margin-bottom:8px;
@@ -21,6 +41,7 @@
   box-shadow:0 0 6px cyan;
   font-size:0.9em;
 }
+#mt2 .titulo{color:cyan;font-weight:bold;}
 #mt2 input{
   width:80px;
   text-align:center;
@@ -39,125 +60,126 @@
   cursor:pointer;
   padding:3px 6px;
 }
-#mt2_tiempo{
+#tiempoMT2{
   min-width:75px;
   color:lime;
   font-weight:bold;
-  transition:all .25s;
-  padding:3px 6px;
-  border-radius:6px;
-  background:#222;
+  transition:all .3s;
 }
-#mt2_tiempo.mt2_alert{ background: red; color: #fff; box-shadow:0 0 8px red; }
-#mt2_tiempo.mt2_final{ background:#0a0; color:#fff; box-shadow:none; }
 </style>
+</head>
+<body>
+<h1>✈️ Aviator Pronosticador IA</h1>
+
+<div class="user-bar">
+  <span>📧 {{ usuario }}</span> |
+  <a href="/logout">Cerrar sesión</a>
+</div>
+
+<div class="container">
+  <div id="hora-analisis">
+    <div id="hora"></div>
+    <div>
+      <input type="text" id="analisisInput" placeholder="1.84x 03:52:27">
+      <button id="analizarBtn">Iniciar</button>
+    </div>
+  </div>
+
+  <div id="display"></div>
+
+  <!-- Bloque MT-2 -->
+  <div id="mt2">
+    <span class="titulo">MT-2</span>
+    <input type="text" id="semillaMT2" placeholder="04:33:58">
+    <button id="btnMT2">▶</button>
+    <span id="tiempoMT2">--:--:--</span>
+  </div>
+
+  <div class="teclado">
+    {% for n in [1,2,3,4,5,6,7,8,9,'.',0,'Borrar'] %}
+      <button onclick="tecla('{{n}}')">{{n}}</button>
+    {% endfor %}
+  </div>
+
+  <div class="acciones">
+    <button onclick="guardar()">Ingresar</button>
+    <button onclick="deshacer()">↩️ Deshacer</button>
+  </div>
+
+  <button class="limpiar" onclick="limpiarPantalla()">🧹 Limpiar Pantalla</button>
+
+  <div id="mensaje_ia"></div>
+
+  <div id="graficoWrap">
+    <canvas id="grafico"></canvas>
+  </div>
+</div>
+
+<h2>Historial</h2>
+<div id="historial">
+  {% for h in historial %}
+    <span>{{'%.2f'|format(h)}}</span>
+  {% endfor %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1/dist/chartjs-plugin-zoom.min.js"></script>
 
 <script>
-/* MT-2: código aislado que NO modifica ni interfiere con el resto.
-   Pegar exactamente donde te dije (antes del teclado). */
-window.addEventListener('load', function mt2_init(){
-  // evitar duplicar listeners si se pega dos veces
-  if(window.__mt2_initialized) return;
-  window.__mt2_initialized = true;
+document.addEventListener("DOMContentLoaded",()=>{
 
-  const INTERVALOS_MT2 = [
-    {h:0,m:0,s:42},
-    {h:0,m:1,s:33},
-    {h:0,m:2,s:18},
-    {h:0,m:2,s:49},
-    {h:0,m:3,s:30}
-  ];
+  const display=document.getElementById("display");
+  const historialDiv=document.getElementById("historial");
+  const mensajeIA=document.getElementById("mensaje_ia");
+  const horaDiv=document.getElementById("hora");
+  const input=document.getElementById("analisisInput");
+  const btn=document.getElementById("analizarBtn");
+  const graficoCtx=document.getElementById("grafico").getContext("2d");
 
-  // elementos (nombres únicos)
-  const elInput = document.getElementById('mt2_semilla');
-  const elBtn   = document.getElementById('mt2_btn');
-  const elSpan  = document.getElementById('mt2_tiempo');
+  function colorPorCuota(c){if(c<2)return"blue";if(c<10)return"purple";return"pink";}
 
-  let mt2_tiempos = [];
-  let mt2_index = 0;
-  let mt2_timer = null;
+  const referencePlugin={
+    id:'referenceLines',
+    afterDraw:chart=>{
+      const ctx=chart.ctx, area=chart.chartArea, yScale=chart.scales['y'];
+      const data=chart.data.datasets[0].data;
+      if(!data||data.length===0) return;
+      const maxVal=Math.max(...data), minVal=Math.min(...data);
+      const soporte=minVal, resistencia=maxVal;
+      const soporte2=soporte + (resistencia-soporte)*0.25;
+      const resistencia2=resistencia - (resistencia-soporte)*0.25;
+      const drawLine=(y,color,w=2,dash=[])=>{
+        const yPixel=yScale.getPixelForValue(y);
+        ctx.save();ctx.beginPath();ctx.setLineDash(dash);
+        ctx.moveTo(area.left,yPixel);ctx.lineTo(area.right,yPixel);
+        ctx.lineWidth=w;ctx.strokeStyle=color;ctx.stroke();ctx.restore();
+      };
+      drawLine(resistencia,'red',2,[]);
+      drawLine(resistencia2,'red',1,[6,4]);
+      drawLine(soporte2,'lime',1,[6,4]);
+      drawLine(soporte,'lime',2,[]);
+    }
+  };
 
-  function mt2_parseHora(str){
-    const parts = str.split(':').map(Number);
-    if(parts.length !== 3 || parts.some(p=>Number.isNaN(p))) return null;
-    const d = new Date();
-    d.setHours(parts[0], parts[1], parts[2], 0);
-    return d;
+  function clampOrResetScales(chart){
+    try{
+      const y = chart.scales['y'];
+      if(!y) return;
+      let min = Number(y.min), max = Number(y.max);
+      if(!isFinite(min) || !isFinite(max) || Math.abs(max - min) < 0.05){chart.resetZoom();return;}
+      const data = chart.data.datasets[0].data || [];
+      const absMaxData = Math.max(1, Math.abs(Math.max(...data)), Math.abs(Math.min(...data)));
+      const limit = Math.max(5, absMaxData * 10);
+      if(min < -limit) min = -limit;
+      if(max > limit) max = limit;
+      if(min !== y.min || max !== y.max){chart.options.scales.y.min = min;chart.options.scales.y.max = max;chart.update('none');}
+    }catch(e){chart.resetZoom();}
   }
 
-  function mt2_sum(base, interval){
-    const n = new Date(base.getTime());
-    n.setSeconds(n.getSeconds() + (interval.h*3600 + interval.m*60 + interval.s));
-    return n;
-  }
-
-  function mt2_fmt(d){
-    if(!d) return '--:--:--';
-    return d.toTimeString().split(' ')[0];
-  }
-
-  function mt2_updateView(titilar){
-    if(mt2_index >= mt2_tiempos.length){
-      elSpan.textContent = 'FINAL';
-      elSpan.classList.remove('mt2_alert');
-      elSpan.classList.add('mt2_final');
-      return;
-    }
-    const objetivo = mt2_tiempos[mt2_index];
-    elSpan.textContent = mt2_fmt(objetivo);
-    elSpan.classList.remove('mt2_final');
-    if(titilar){
-      elSpan.classList.add('mt2_alert');
-    } else {
-      elSpan.classList.remove('mt2_alert');
-    }
-  }
-
-  function mt2_check(){
-    if(mt2_index >= mt2_tiempos.length){
-      clearInterval(mt2_timer); mt2_timer = null;
-      mt2_updateView(false);
-      return;
-    }
-    const ahora = new Date();
-    const objetivo = mt2_tiempos[mt2_index];
-    const diff = (objetivo - ahora) / 1000; // segundos
-    const inAlertWindow = Math.abs(diff) <= 10;
-    mt2_updateView(inAlertWindow);
-    if(diff <= 0){
-      mt2_index++;
-      // actualizar inmediatamente para no esperar al siguiente segundo
-      mt2_updateView(false);
-    }
-  }
-
-  function mt2_start(){
-    const raw = elInput.value.trim();
-    const base = mt2_parseHora(raw);
-    if(!base){
-      alert('Formato inválido — usa HH:MM:SS');
-      return;
-    }
-    // construir la secuencia
-    mt2_tiempos = [ base ];
-    for(let i=0;i<INTERVALOS_MT2.length;i++){
-      mt2_tiempos.push( mt2_sum(mt2_tiempos[i], INTERVALOS_MT2[i]) );
-    }
-    mt2_index = 1; // el primer objetivo es el segundo elemento
-    // limpiar timer previo
-    if(mt2_timer) { clearInterval(mt2_timer); mt2_timer = null; }
-    // mostrar inmediato y arrancar comprobador cada segundo
-    mt2_updateView(false);
-    mt2_check(); // chequeo inmediato (por si ya pasó)
-    mt2_timer = setInterval(mt2_check, 1000);
-  }
-
-  // conectar (sin sobrescribir otros listeners)
-  if(elBtn) elBtn.addEventListener('click', mt2_start);
-  // permitir iniciar con Enter estando en el input (no interfiere con otras teclas)
-  if(elInput) elInput.addEventListener('keydown', function(e){
-    if(e.key === 'Enter') { e.preventDefault(); mt2_start(); }
-  });
-
-}); // end load listener
-</script>
+  const grafico=new Chart(graficoCtx,{
+    type:'line',
+    data:{labels:[],datasets:[{label:'Tendencia',data:[],borderColor:'cyan',borderWidth:2,pointRadius:5,pointBackgroundColor:[],tension:0}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'ne
