@@ -91,16 +91,14 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   function colorPorCuota(c){if(c<2)return"blue";if(c<10)return"purple";return"pink";}
 
-  // soporte y resistencia reales
+  let globalMax=0,globalMin=0;
+
   const referencePlugin={
     id:'referenceLines',
     afterDraw:chart=>{
       const ctx=chart.ctx,area=chart.chartArea,yScale=chart.scales['y'];
-      const data=chart.data.datasets[0].data;
-      if(!data||data.length===0)return;
-      const maxVal=Math.max(...data);
-      const minVal=Math.min(...data);
-      const soporte=minVal,resistencia=maxVal;
+      if(globalMax===globalMin)return;
+      const soporte=globalMin,resistencia=globalMax;
       const soporte2=soporte+(resistencia-soporte)*0.25;
       const resistencia2=resistencia-(resistencia-soporte)*0.25;
       const drawLine=(y,color,w=2)=>{
@@ -129,12 +127,14 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   function actualizarGrafico(){
     const cuotas=[...historialDiv.children].map(s=>parseFloat(s.innerText));
+    if(cuotas.length===0){grafico.data.labels=[];grafico.data.datasets[0].data=[];grafico.update();return;}
     let valor=0;
     const serie=cuotas.map(c=>{valor+=(c<2?-1:1);return valor;});
     grafico.data.labels=serie.map((_,i)=>i+1);
     grafico.data.datasets[0].data=serie;
     grafico.data.datasets[0].pointBackgroundColor=cuotas.map(c=>colorPorCuota(c));
     const max=Math.max(...serie,0),min=Math.min(...serie,0);
+    globalMax=max;globalMin=min;
     const absMax=Math.max(Math.abs(max),Math.abs(min))||1;
     grafico.options.scales.y.min=-absMax-1;
     grafico.options.scales.y.max=absMax+1;
