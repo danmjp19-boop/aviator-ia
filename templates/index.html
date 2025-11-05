@@ -1,94 +1,6 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>✈️ Aviator Pronosticador IA</title>
-<style>
-/* --- Tus estilos originales (con ligeros ajustes para el canvas) --- */
-body { background:#000; color:cyan; font-family:Arial,sans-serif; text-align:center; margin:0; padding:20px;}
-h1{color:#00ffff;margin:6px 0;}
-.container{max-width:400px;margin:0 auto;background:#111;padding:20px;border-radius:15px;box-shadow:0 0 15px cyan;display:flex;flex-direction:column;align-items:center;}
-#hora-analisis{display:flex;justify-content:space-between;align-items:center;width:100%;margin-bottom:10px;}
-#hora{font-size:1.2em;color:#0ff;letter-spacing:1px;}
-#analisisInput{width:120px;padding:5px;border:1px solid cyan;background:#000;color:cyan;border-radius:8px;text-align:center;transition:all .3s ease;}
-#analizarBtn{padding:6px 10px;background:cyan;color:#000;border:none;border-radius:8px;font-weight:bold;cursor:pointer;}
-.titilar{animation: titilarAnim 1s infinite alternate;}
-@keyframes titilarAnim{0%{box-shadow:0 0 5px cyan;color:cyan;}100%{box-shadow:0 0 20px #00ffff;color:white;}}
-#display{background:#000;color:#0ff;font-size:2em;padding:10px;border:2px solid cyan;border-radius:10px;min-height:40px;margin-bottom:15px;width:100%;}
-.teclado button{width:30%;margin:5px;padding:10px;font-size:1.2em;border-radius:10px;background:#022;color:cyan;border:1px solid #0ff;cursor:pointer;}
-.acciones{margin-top:10px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;width:100%;}
-.acciones button{flex:1;padding:10px;border-radius:10px;background:cyan;color:black;font-weight:bold;cursor:pointer;}
-.limpiar{background:#f00;color:white;margin-top:20px;width:100%;font-weight:bold;border:2px solid #faa;transition:all 0.2s ease;}
-.limpiar:hover{background:#c00;box-shadow:0 0 10px red;}
-#mensaje_ia{margin-top:15px;font-size:1.2em;color:lime;min-height:1.5em;transition:opacity .3s ease;}
-/* wrapper del grafico */
-#graficoWrap{width:100%;height:260px;background:#000;border:2px solid cyan;border-radius:10px;padding:8px;box-sizing:border-box;overflow:hidden;margin-top:12px;}
-canvas{width:100% !important;height:100% !important;display:block;}
-#historial{margin-top:15px;display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;justify-content:flex-start;gap:6px;scrollbar-width:thin;scroll-behavior:smooth;padding-bottom:10px;border-top:1px solid cyan;border-bottom:1px solid cyan;width:100%;}
-#historial span{background:#033;padding:5px 10px;border-radius:5px;color:white;white-space:nowrap;flex-shrink:0;font-weight:bold;}
-.user-bar{margin-bottom:10px;text-align:center;font-size:0.95em;}
-.user-bar span{color:#0ff;font-weight:bold;}
-.user-bar a{color:#ff5555;text-decoration:none;font-weight:bold;margin-left:8px;}
-.user-bar a:hover{text-decoration:underline;}
-/* mantiene el mismo look */
-</style>
-</head>
-<body>
-<h1>✈️ Aviator Pronosticador IA</h1>
-
-<div class="user-bar">
-  <span>📧 {{ usuario }}</span> |
-  <a href="/logout">Cerrar sesión</a>
-</div>
-
-<div class="container">
-  <div id="hora-analisis">
-    <div id="hora"></div>
-    <div>
-      <input type="text" id="analisisInput" placeholder="1.84x 03:52:27">
-      <button id="analizarBtn">Iniciar</button>
-    </div>
-  </div>
-
-  <div id="display"></div>
-
-  <div class="teclado">
-    {% for n in [1,2,3,4,5,6,7,8,9,'.',0,'Borrar'] %}
-      <button onclick="tecla('{{n}}')">{{n}}</button>
-    {% endfor %}
-  </div>
-
-  <div class="acciones">
-    <button onclick="guardar()">Ingresar</button>
-    <button onclick="deshacer()">↩️ Deshacer</button>
-  </div>
-
-  <button class="limpiar" onclick="limpiarPantalla()">🧹 Limpiar Pantalla</button>
-
-  <div id="mensaje_ia"></div>
-
-  <div id="graficoWrap">
-    <canvas id="grafico"></canvas>
-  </div>
-</div>
-
-<h2>Historial</h2>
-<div id="historial">
-  {% for h in historial %}
-    <span>{{'%.2f'|format(h)}}</span>
-  {% endfor %}
-</div>
-
-<!-- Chart.js + Hammer + plugin-zoom (versiones compatibles con v3) -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1/dist/chartjs-plugin-zoom.min.js"></script>
-
 <script>
 document.addEventListener("DOMContentLoaded",()=>{
 
-  // Elementos
   const display = document.getElementById("display");
   const historialDiv = document.getElementById("historial");
   const mensajeIA = document.getElementById("mensaje_ia");
@@ -97,10 +9,13 @@ document.addEventListener("DOMContentLoaded",()=>{
   const btn = document.getElementById("analizarBtn");
   const graficoCanvas = document.getElementById("grafico").getContext("2d");
 
-  // colorPorCuota (misma lógica)
-  function colorPorCuota(c){ if(c < 2) return "blue"; if(c < 10) return "purple"; return "pink"; }
+  function colorPorCuota(c){ 
+    if(c < 2) return "blue"; 
+    if(c < 10) return "purple"; 
+    return "pink"; 
+  }
 
-  // Plugin para dibujar líneas de referencia (se ejecuta afterDraw)
+  // 🔹 Plugin de líneas automáticas: 2 resistencias y 2 soportes globales
   const referencePlugin = {
     id: 'referenceLines',
     afterDraw: chart => {
@@ -110,18 +25,13 @@ document.addEventListener("DOMContentLoaded",()=>{
       const data = chart.data.datasets[0].data;
       if(!data || data.length === 0) return;
 
-      // calculamos rango simétrico: usar el abs max para centrar en 0
-      const maxVal = Math.max(...data);
-      const minVal = Math.min(...data);
-      const absMax = Math.max(Math.abs(maxVal), Math.abs(minVal)) || 1;
-      const padding = 0.5; // margen visual
-      const top = absMax + padding;
-      const bottom = -absMax - padding;
-
-      // Colocar soporte y resistencia simétricos con factor (ajustable)
-      const factor = 0.7;
-      const resistencia = absMax * factor;
-      const soporte = -absMax * factor;
+      // Máximos y mínimos globales
+      const ordenados = [...data].sort((a,b)=>b-a);
+      const max1 = ordenados[0];
+      const max2 = ordenados[1] ?? max1;
+      const ordenadosMin = [...data].sort((a,b)=>a-b);
+      const min1 = ordenadosMin[0];
+      const min2 = ordenadosMin[1] ?? min1;
 
       const drawLine = (y, color, width=2) => {
         const yPixel = yScale.getPixelForValue(y);
@@ -135,25 +45,29 @@ document.addEventListener("DOMContentLoaded",()=>{
         ctx.restore();
       };
 
-      // dibujar: central (0) blanca, resistencia roja, soporte verde
-      drawLine(0, 'white', 2);
-      drawLine(resistencia, 'red', 2);
-      drawLine(soporte, 'lime', 2);
+      // Líneas
+      drawLine(0, 'white', 2);        // línea media
+      drawLine(max1, 'red', 2);       // resistencia 1
+      drawLine(max2, 'red', 1.5);     // resistencia 2
+      drawLine(min1, 'lime', 2);      // soporte 1
+      drawLine(min2, 'lime', 1.5);    // soporte 2
 
-      // opcional: valores texto al borde derecho
+      // Etiquetas a la derecha
       ctx.save();
-      ctx.fillStyle = 'white';
       ctx.font = '11px Arial';
-      ctx.fillText('0', area.right - 22, yScale.getPixelForValue(0) - 6);
+      ctx.fillStyle = 'white';
+      ctx.fillText('0', area.right - 20, yScale.getPixelForValue(0) - 4);
       ctx.fillStyle = 'red';
-      ctx.fillText(resistencia.toFixed(2), area.right - 50, yScale.getPixelForValue(resistencia) - 6);
+      ctx.fillText(max1.toFixed(2), area.right - 50, yScale.getPixelForValue(max1) - 4);
+      ctx.fillText(max2.toFixed(2), area.right - 50, yScale.getPixelForValue(max2) - 4);
       ctx.fillStyle = 'lime';
-      ctx.fillText(soporte.toFixed(2), area.right - 50, yScale.getPixelForValue(soporte) - 6);
+      ctx.fillText(min1.toFixed(2), area.right - 50, yScale.getPixelForValue(min1) - 4);
+      ctx.fillText(min2.toFixed(2), area.right - 50, yScale.getPixelForValue(min2) - 4);
       ctx.restore();
     }
   };
 
-  // crear chart
+  // 🔹 Gráfico principal
   const grafico = new Chart(graficoCanvas, {
     type: 'line',
     data: {
@@ -185,27 +99,24 @@ document.addEventListener("DOMContentLoaded",()=>{
       },
       scales: {
         x: { ticks: { color: 'cyan' }, grid: { color: '#222' } },
-        y: {
-          ticks: { color: 'cyan' },
-          grid: { color: '#222' },
-          // range configurado dinámicamente en actualizarGrafico()
-        }
+        y: { ticks: { color: 'cyan' }, grid: { color: '#222' } }
       }
     },
-    plugins: [ Chart.registry.getPlugin('zoom'), referencePlugin ]
+    plugins: [Chart.registry.getPlugin('zoom'), referencePlugin]
   });
 
-  // Hammer para evitar el scroll del navegador en pinch y permitir pinch en móvil
+  // Zoom natural táctil (evita el cuadro gris)
   const hammerArea = new Hammer(document.getElementById('grafico'));
   hammerArea.get('pinch').set({ enable: true });
   hammerArea.on('pinchstart pinchmove pinchend', e => e.preventDefault());
 
-  // Actualiza el gráfico con la lógica que ya tenías
+  // 🔹 Actualizar gráfico con los datos reales
   function actualizarGrafico(){
     const cuotas = Array.from(historialDiv.children).map(s => parseFloat(s.innerText));
     let valor = 0;
     const serie = cuotas.map(c => {
-      if (c < 2) { valor -= 1; } else { valor += 1; }
+      if (c < 2) valor -= 1; 
+      else valor += 1; 
       return valor;
     });
 
@@ -213,19 +124,16 @@ document.addEventListener("DOMContentLoaded",()=>{
     grafico.data.datasets[0].data = serie;
     grafico.data.datasets[0].pointBackgroundColor = cuotas.map(c => colorPorCuota(c));
 
-    // Eje Y simétrico alrededor de 0: usar absMax
     const max = Math.max(...serie, 0);
     const min = Math.min(...serie, 0);
     const absMax = Math.max(Math.abs(max), Math.abs(min)) || 1;
-    const padding = 1; // espacio visual arriba/abajo
-    grafico.options.scales.y.min = -absMax - padding;
-    grafico.options.scales.y.max = absMax + padding;
+    grafico.options.scales.y.min = -absMax - 1;
+    grafico.options.scales.y.max = absMax + 1;
 
-    // actualizar sin animación para que las lineas en afterDraw salgan correctas
     grafico.update('none');
   }
 
-  // funciones UI (misma API que tenías)
+  // 🔹 Funciones originales
   function _tecla(t){ if(t === "Borrar") display.innerText = display.innerText.slice(0,-1); else display.innerText += t; }
 
   function _guardar(){
@@ -242,10 +150,7 @@ document.addEventListener("DOMContentLoaded",()=>{
         historialDiv.appendChild(span);
         historialDiv.scrollLeft = historialDiv.scrollWidth;
         actualizarGrafico();
-      }).catch(()=> {
-        // si falla la petición, aún actualizamos localmente para pruebas (opcional)
-        actualizarGrafico();
-      });
+      }).catch(()=> actualizarGrafico());
   }
 
   function _deshacer(){
@@ -253,8 +158,7 @@ document.addEventListener("DOMContentLoaded",()=>{
       if(historialDiv.lastChild) historialDiv.removeChild(historialDiv.lastChild);
       mensajeIA.innerText = "";
       actualizarGrafico();
-    }).catch(()=> {
-      // fallback local
+    }).catch(()=>{
       if(historialDiv.lastChild) historialDiv.removeChild(historialDiv.lastChild);
       actualizarGrafico();
     });
@@ -270,8 +174,7 @@ document.addEventListener("DOMContentLoaded",()=>{
       grafico.data.datasets[0].data = [];
       grafico.update();
       alert("✅ Pantalla e historial reiniciados.");
-    }).catch(()=> {
-      // fallback
+    }).catch(()=>{
       historialDiv.innerHTML = "";
       grafico.data.labels = [];
       grafico.data.datasets[0].data = [];
@@ -279,13 +182,14 @@ document.addEventListener("DOMContentLoaded",()=>{
     });
   }
 
-  // Hora en vivo y titileo (igual a tu versión original)
+  // 🔹 Reloj en vivo
   function actualizarHora(){
     horaDiv.innerText = "🕒 " + new Date().toLocaleTimeString('es-ES',{hour12:false});
   }
   setInterval(actualizarHora,1000);
   actualizarHora();
 
+  // 🔹 Analizador de texto
   function analizarEntrada(){
     const texto = input.value.trim();
     const match = texto.match(/([\d.]+)x\s*(\d{2}):(\d{2}):(\d{2})/);
@@ -302,22 +206,14 @@ document.addEventListener("DOMContentLoaded",()=>{
   btn.onclick = analizarEntrada;
   input.addEventListener("paste", ()=> setTimeout(analizarEntrada, 100));
 
-  // conectar funciones a window como antes
+  // 🔹 Eventos y observadores
   window.tecla = _tecla;
   window.guardar = _guardar;
   window.deshacer = _deshacer;
   window.limpiarPantalla = _limpiarPantalla;
-
-  // Observador DOM: actualiza cuando historial cambia (insertions/removals)
   const ro = new MutationObserver(()=> actualizarGrafico());
   ro.observe(historialDiv, { childList:true });
-
-  // Reseteo del zoom con doble clic/doble toque
-  document.getElementById('grafico').addEventListener('dblclick', ()=> { grafico.resetZoom(); });
-
-  // Inicializar gráfico al cargar con datos si ya hay historial
+  document.getElementById('grafico').addEventListener('dblclick', ()=> grafico.resetZoom());
   actualizarGrafico();
 });
 </script>
-</body>
-</html>
