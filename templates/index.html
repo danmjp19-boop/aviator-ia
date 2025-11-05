@@ -134,10 +134,12 @@ h1{color:#00ffff;margin:6px 0;}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
+/* Reloj */
 const horaDiv=document.getElementById("hora");
 function actualizarHora(){horaDiv.textContent="🕒 "+new Date().toLocaleTimeString('es-ES',{hour12:false});}
 setInterval(actualizarHora,1000);actualizarHora();
 
+/* Display y botones */
 const display=document.getElementById("display");
 const historialDiv=document.getElementById("historial");
 
@@ -146,6 +148,26 @@ function tecla(t){
   else{display.innerText+=t;}
 }
 
+/* Gráfico */
+const ctx=document.getElementById('grafico').getContext('2d');
+const chart=new Chart(ctx,{
+  type:'line',
+  data:{labels:[],datasets:[{label:'Tendencia',data:[],borderColor:'cyan',tension:0.1,pointRadius:4,pointBackgroundColor:'cyan'}]},
+  options:{
+    responsive:true,
+    scales:{x:{ticks:{color:'cyan'}},y:{ticks:{color:'cyan'}}},
+    plugins:{legend:{display:false}}
+  }
+});
+
+function actualizarGrafico(){
+  const datos=[...historialDiv.children].map(s=>parseFloat(s.textContent)).filter(v=>!isNaN(v));
+  chart.data.labels=datos.map((_,i)=>i+1);
+  chart.data.datasets[0].data=datos;
+  chart.update();
+}
+
+/* Acciones */
 function guardar(){
   const valor=parseFloat(display.innerText);
   if(isNaN(valor))return;
@@ -153,16 +175,19 @@ function guardar(){
   span.textContent=valor.toFixed(2);
   historialDiv.appendChild(span);
   display.textContent="";
+  actualizarGrafico();
 }
 
 function deshacer(){
   if(historialDiv.lastChild)historialDiv.removeChild(historialDiv.lastChild);
+  actualizarGrafico();
 }
 
 function limpiarPantalla(){
   if(confirm("¿Limpiar todo?")){
     historialDiv.innerHTML="";
     display.textContent="";
+    actualizarGrafico();
   }
 }
 
