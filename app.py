@@ -161,7 +161,7 @@ def predecir_con_neuronal(hist):
         print("⚠️ Error prediciendo:", e)
         return "clear"
     if prob > 0.6:
-        return "🟢 Pronóstico: próxima cuota probable mayor a 2.00"
+        return "🟢 Entrada al 1.50 y 2.00 alta probabilidad"
     else:
         return "clear"
 
