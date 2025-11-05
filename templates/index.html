@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>✈️ Aviator Pronosticador IA</title>
 <style>
+/* tus estilos EXACTOS (no modifiqué visual) */
 body{background:#000;color:cyan;font-family:Arial,sans-serif;text-align:center;margin:0;padding:20px;}
 h1{color:#00ffff;margin:6px 0;}
 .container{max-width:400px;margin:0 auto;background:#111;padding:20px;border-radius:15px;box-shadow:0 0 15px cyan;display:flex;flex-direction:column;align-items:center;}
@@ -18,7 +19,7 @@ h1{color:#00ffff;margin:6px 0;}
 .acciones button{flex:1;padding:10px;border-radius:10px;background:cyan;color:black;font-weight:bold;cursor:pointer;}
 .limpiar{background:#f00;color:white;margin-top:20px;width:100%;font-weight:bold;border:2px solid #faa;}
 #graficoWrap{width:100%;height:260px;background:#000;border:2px solid cyan;border-radius:10px;padding:8px;margin-top:12px;overflow:hidden;}
-/* IMPORTANT: allow plugin zoom to handle gestures — prevent browser default gestures */
+/* importante para gestos en móvil */
 #graficoWrap canvas{width:100%!important;height:100%!important;display:block;touch-action:none;-ms-touch-action:none;}
 #mensaje_ia{margin-top:15px;font-size:1.2em;color:lime;min-height:1.5em;}
 #historial{margin-top:15px;display:flex;overflow-x:auto;gap:6px;padding-bottom:10px;border-top:1px solid cyan;border-bottom:1px solid cyan;width:100%;}
@@ -75,7 +76,7 @@ h1{color:#00ffff;margin:6px 0;}
   {% endfor %}
 </div>
 
-<!-- versiones compatibles -->
+<!-- librerías (compatibles con tu versión) -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1/dist/chartjs-plugin-zoom.min.js"></script>
@@ -93,7 +94,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   function colorPorCuota(c){if(c<2)return"blue";if(c<10)return"purple";return"pink";}
 
-  // plugin para dibujar soportes/resistencias (globales)
+  // plugin de líneas (soportes/resistencias globales)
   const referencePlugin={
     id:'referenceLines',
     afterDraw:chart=>{
@@ -118,90 +119,118 @@ document.addEventListener("DOMContentLoaded",()=>{
     }
   };
 
-  // crear chart (idéntico a tu estructura)
+  // helper para validar/clampear escalas tras zoom/pan
+  function clampOrResetScales(chart){
+    try{
+      const y = chart.scales['y'];
+      if(!y) return;
+      let min = Number(y.min);
+      let max = Number(y.max);
+      if(!isFinite(min) || !isFinite(max) || Math.abs(max - min) < 0.05){
+        // rango inválido o demasiado pequeño -> resetear zoom
+        chart.resetZoom();
+        return;
+      }
+      // evitar zoom desproporcionado: límite relativo al rango de datos
+      const data = chart.data.datasets[0].data || [];
+      const absMaxData = Math.max(1, Math.abs(Math.max(...data)), Math.abs(Math.min(...data)));
+      const limit = Math.max(5, absMaxData * 10); // no permitir zoom fuera de +-limit
+      if(min < -limit) min = -limit;
+      if(max > limit) max = limit;
+      // aplicar si se cambió
+      if(min !== y.min || max !== y.max){
+        chart.options.scales.y.min = min;
+        chart.options.scales.y.max = max;
+        chart.update('none');
+      }
+    }catch(e){
+      // en caso de error, resetear
+      chart.resetZoom();
+    }
+  }
+
+  // crear gráfico (igual a tu estructura)
   const grafico=new Chart(graficoCtx,{
     type:'line',
-    data:{labels:[],datasets:[{label:'Tendencia',data:[],borderColor:'cyan',borderWidth:2,pointRadius:5,pointBackgroundColor:[],tension:0}]},
+    data:{ labels:[], datasets:[{ label:'Tendencia', data:[], borderColor:'cyan', borderWidth:2, pointRadius:5, pointBackgroundColor:[], tension:0 }]},
     options:{
       responsive:true,
       maintainAspectRatio:false,
-      interaction:{mode:'nearest',intersect:false},
+      interaction:{ mode:'nearest', intersect:false },
       plugins:{
-        legend:{display:false},
+        legend:{ display:false },
         zoom:{
           pan:{
             enabled:true,
             mode:'xy',
-            modifierKey:null, // arrastrar sin tecla
+            modifierKey:null,
             threshold:5
           },
           zoom:{
-            wheel:{enabled:true, speed:0.12, threshold:1},
-            pinch:{enabled:true, threshold:1},
-            mode:'xy'
-          },
-          limits:{
-            x:{min:null, max:null},
-            y:{min:null, max:null}
+            wheel:{ enabled:true, speed:0.12, threshold:1 },
+            pinch:{ enabled:true, threshold:1 },
+            mode:'xy',
+            // callback llamado durante el zoom
+            onZoom:({chart})=>{
+              // validar escalas cada vez que zoom cambia
+              clampOrResetScales(chart);
+            }
           }
         }
       },
       scales:{
-        x:{ticks:{color:'cyan'},grid:{color:'#222'}},
-        y:{ticks:{color:'cyan'},grid:{color:'#222'}}
+        x:{ ticks:{ color:'cyan' }, grid:{ color:'#222' } },
+        y:{ ticks:{ color:'cyan' }, grid:{ color:'#222' } }
       }
     },
-    plugins:[Chart.registry.getPlugin('zoom'), referencePlugin]
+    plugins:[ Chart.registry.getPlugin('zoom'), referencePlugin ]
   });
 
-  // Hammer para pinch (evitar comportamiento del navegador)
+  // Hammer para pinch (evita comportamiento nativo)
   const hammerArea = new Hammer(document.getElementById('grafico'));
   hammerArea.get('pinch').set({ enable: true });
   hammerArea.on('pinchstart pinchmove pinchend', e => e.preventDefault());
 
-  // actualizar gráfico desde historial
+  // actualizar gráfico con tu lógica
   function actualizarGrafico(){
-    const cuotas=Array.from(historialDiv.children).map(s=>parseFloat(s.innerText));
-    if(cuotas.length===0){
-      grafico.data.labels=[]; grafico.data.datasets[0].data=[]; grafico.update(); return;
+    const cuotas = Array.from(historialDiv.children).map(s => parseFloat(s.innerText));
+    if(cuotas.length === 0){
+      grafico.data.labels = []; grafico.data.datasets[0].data = []; grafico.update(); return;
     }
     let valor=0;
-    const serie=cuotas.map(c=>{ valor += (c<2 ? -1 : 1); return valor; });
+    const serie = cuotas.map(c => { valor += (c<2 ? -1 : 1); return valor; });
     grafico.data.labels = serie.map((_,i)=>i+1);
     grafico.data.datasets[0].data = serie;
-    grafico.data.datasets[0].pointBackgroundColor = cuotas.map(c=>colorPorCuota(c));
-
+    grafico.data.datasets[0].pointBackgroundColor = cuotas.map(c => colorPorCuota(c));
     // eje Y simétrico
     const max = Math.max(...serie,0), min = Math.min(...serie,0);
     const absMax = Math.max(Math.abs(max), Math.abs(min)) || 1;
     grafico.options.scales.y.min = -absMax - 1;
     grafico.options.scales.y.max = absMax + 1;
-
-    // actualizar sin animación para que afterDraw dibuje las líneas inmediatamente
     grafico.update('none');
   }
 
-  // UI functions (exactamente igual que las tuyas)
+  // UI: mismas funciones tuyas
   window.tecla = t => { if(t==="Borrar") display.innerText = display.innerText.slice(0,-1); else display.innerText += t; };
 
   window.guardar = () => {
     const cuota = parseFloat(display.innerText.trim());
     if(isNaN(cuota)) return;
-    fetch("/guardar",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({cuota})})
+    fetch("/guardar", { method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"}, body: new URLSearchParams({cuota}) })
       .then(r=>r.json()).then(d=>{
-        display.innerText="";
-        mensajeIA.innerText=(d.prediccion&&d.prediccion!=="clear")?d.prediccion:"";
-        const span=document.createElement("span");
-        span.innerText=cuota.toFixed(2);
-        span.style.color="white";
+        display.innerText = "";
+        mensajeIA.innerText = (d.prediccion && d.prediccion !== "clear") ? d.prediccion : "";
+        const span = document.createElement("span");
+        span.innerText = cuota.toFixed(2);
+        span.style.color = "white";
         historialDiv.appendChild(span);
         historialDiv.scrollLeft = historialDiv.scrollWidth;
         actualizarGrafico();
       }).catch(()=>{
-        // fallback local
-        const span=document.createElement("span");
-        span.innerText=cuota.toFixed(2);
-        span.style.color="white";
+        // fallback local si falla la petición
+        const span = document.createElement("span");
+        span.innerText = cuota.toFixed(2);
+        span.style.color = "white";
         historialDiv.appendChild(span);
         historialDiv.scrollLeft = historialDiv.scrollWidth;
         actualizarGrafico();
@@ -211,19 +240,17 @@ document.addEventListener("DOMContentLoaded",()=>{
   window.deshacer = () => {
     fetch("/borrar_ultimo",{method:"POST"}).then(()=>{
       if(historialDiv.lastChild) historialDiv.removeChild(historialDiv.lastChild);
-      mensajeIA.innerText=""; actualizarGrafico();
+      mensajeIA.innerText = ""; actualizarGrafico();
     }).catch(()=>{ if(historialDiv.lastChild) historialDiv.removeChild(historialDiv.lastChild); actualizarGrafico(); });
   };
 
   window.limpiarPantalla = () => {
     if(!confirm("⚠️ ¿Seguro que deseas borrar el historial y reiniciar la pantalla?")) return;
     fetch("/limpiar_todo",{method:"POST"}).then(()=>{
-      historialDiv.innerHTML=""; mensajeIA.innerText=""; display.innerText="";
-      grafico.data.labels=[]; grafico.data.datasets[0].data=[]; grafico.update();
+      historialDiv.innerHTML = ""; mensajeIA.innerText = ""; display.innerText = "";
+      grafico.data.labels = []; grafico.data.datasets[0].data = []; grafico.update();
       alert("✅ Pantalla e historial reiniciados.");
-    }).catch(()=>{
-      historialDiv.innerHTML=""; grafico.data.labels=[]; grafico.data.datasets[0].data=[]; grafico.update();
-    });
+    }).catch(()=>{ historialDiv.innerHTML = ""; grafico.data.labels = []; grafico.data.datasets[0].data = []; grafico.update(); });
   };
 
   // parse input helper
@@ -243,16 +270,21 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   // reloj
   function actualizarHora(){ horaDiv.innerText = "🕒 " + new Date().toLocaleTimeString('es-ES',{hour12:false}); }
-  setInterval(actualizarHora,1000); actualizarHora();
+  setInterval(actualizarHora,1000);
+  actualizarHora();
 
-  // reset zoom on dblclick
+  // reset zoom con dblclick
   document.getElementById('grafico').addEventListener('dblclick', ()=> grafico.resetZoom());
 
-  // observe historial changes
-  const ro = new MutationObserver(()=> actualizarGrafico());
+  // observar historial y actualizar
+  const ro = new MutationObserver(()=> {
+    actualizarGrafico();
+    // al actualizar también validamos escalas por si hay zoom aplicado
+    clampOrResetScales(grafico);
+  });
   ro.observe(historialDiv, { childList: true });
 
-  // init
+  // inicio
   actualizarGrafico();
 
 });
