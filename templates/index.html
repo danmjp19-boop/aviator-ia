@@ -1,199 +1,283 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>✈️ Aviator Pronosticador IA</title>
-<style>
-body{background:#000;color:cyan;font-family:Arial,sans-serif;text-align:center;margin:0;padding:20px;}
-h1{color:#00ffff;margin:6px 0;}
-.container{max-width:400px;margin:0 auto;background:#111;padding:20px;border-radius:15px;box-shadow:0 0 15px cyan;display:flex;flex-direction:column;align-items:center;}
-#hora-analisis{display:flex;justify-content:space-between;align-items:center;width:100%;margin-bottom:10px;}
-#hora{font-size:1.2em;color:#0ff;letter-spacing:1px;}
-#analisisInput{width:120px;padding:5px;border:1px solid cyan;background:#000;color:cyan;border-radius:8px;text-align:center;transition:all .3s ease;}
-#analizarBtn{padding:6px 10px;background:cyan;color:#000;border:none;border-radius:8px;font-weight:bold;cursor:pointer;}
-#display{background:#000;color:#0ff;font-size:2em;padding:10px;border:2px solid cyan;border-radius:10px;min-height:40px;margin-bottom:15px;width:100%;}
-.teclado button{width:30%;margin:5px;padding:10px;font-size:1.2em;border-radius:10px;background:#022;color:cyan;border:1px solid #0ff;cursor:pointer;}
-.acciones{margin-top:10px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;width:100%;}
-.acciones button{flex:1;padding:10px;border-radius:10px;background:cyan;color:black;font-weight:bold;cursor:pointer;}
-.limpiar{background:#f00;color:white;margin-top:20px;width:100%;font-weight:bold;border:2px solid #faa;transition:all 0.2s ease;}
-.limpiar:hover{background:#c00;box-shadow:0 0 10px red;}
-#graficoWrap{width:100%;height:260px;background:#000;border:2px solid cyan;border-radius:10px;padding:8px;box-sizing:border-box;overflow:hidden;margin-top:12px;}
-canvas{width:100% !important;height:100% !important;display:block;}
-#historial{margin-top:15px;display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;justify-content:flex-start;gap:6px;scrollbar-width:thin;scroll-behavior:smooth;padding-bottom:10px;border-top:1px solid cyan;border-bottom:1px solid cyan;width:100%;}
-#historial span{background:#033;padding:5px 10px;border-radius:5px;color:white;white-space:nowrap;flex-shrink:0;font-weight:bold;}
-.user-bar{text-align:center;font-size:0.95em;margin-bottom:10px;}
-.user-bar span{color:#0ff;font-weight:bold;}
-.user-bar a{color:#ff5555;text-decoration:none;font-weight:bold;margin-left:8px;}
-.user-bar a:hover{text-decoration:underline;}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aviator Pronosticador IA</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+
+  <style>
+    body {
+      background-color: #000;
+      color: cyan;
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+    .container {
+      margin: 20px auto;
+      padding: 15px;
+      border: 2px solid cyan;
+      border-radius: 15px;
+      box-shadow: 0 0 20px cyan;
+      width: 85%;
+      max-width: 600px;
+    }
+    canvas {
+      background-color: #111;
+      width: 100%;
+      height: 300px;
+      border: 1px solid cyan;
+      border-radius: 10px;
+    }
+    #mensaje_ia {
+      color: #fff;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    #historial span {
+      margin: 0 3px;
+    }
+    button {
+      margin: 4px;
+      padding: 8px 15px;
+      background-color: cyan;
+      color: black;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #00ffffa0;
+    }
+  </style>
 </head>
+
 <body>
-<h1>✈️ Aviator Pronosticador IA</h1>
+  <h2>✈️ Aviator Pronosticador IA</h2>
+  <div id="hora"></div>
+  <p><strong id="correo">{{ correo }}</strong> | 
+     <a href="/logout" style="color:red;text-decoration:none;">Cerrar sesión</a></p>
 
-<div class="user-bar">
-  <span>📧 {{ usuario }}</span> |
-  <a href="/logout">Cerrar sesión</a>
-</div>
-
-<div class="container">
-  <div id="hora-analisis">
-    <div id="hora"></div>
-    <div>
-      <input type="text" id="analisisInput" placeholder="1.84x 03:52:27">
-      <button id="analizarBtn">Iniciar</button>
-    </div>
-  </div>
-
-  <div id="display"></div>
-
-  <div class="teclado">
-    {% for n in [1,2,3,4,5,6,7,8,9,'.',0,'Borrar'] %}
-      <button onclick="tecla('{{n}}')">{{n}}</button>
-    {% endfor %}
-  </div>
-
-  <div class="acciones">
-    <button onclick="guardar()">Ingresar</button>
-    <button onclick="deshacer()">↩️ Deshacer</button>
-  </div>
-
-  <button class="limpiar" onclick="limpiarPantalla()">🧹 Limpiar Pantalla</button>
-
-  <div id="graficoWrap">
+  <div class="container">
     <canvas id="grafico"></canvas>
   </div>
-</div>
 
-<h2>Historial</h2>
-<div id="historial">
-  {% for h in historial %}
-    <span>{{'%.2f'|format(h)}}</span>
-  {% endfor %}
-</div>
+  <div id="mensaje_ia"></div>
 
-<!-- Librerías necesarias -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/hammerjs"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+  <div id="display" style="font-size:1.5em;color:white;margin:10px;"></div>
 
-<script>
-document.addEventListener("DOMContentLoaded",()=>{
+  <div>
+    <button onclick="tecla('1')">1</button>
+    <button onclick="tecla('2')">2</button>
+    <button onclick="tecla('3')">3</button>
+    <button onclick="tecla('.')">.</button>
+    <button onclick="tecla('Borrar')">←</button>
+  </div>
 
-  const display = document.getElementById("display");
-  const historialDiv = document.getElementById("historial");
-  const horaDiv = document.getElementById("hora");
-  const graficoCanvas = document.getElementById("grafico").getContext("2d");
+  <div>
+    <button onclick="guardar()">Ingresar</button>
+    <button onclick="deshacer()">Deshacer</button>
+    <button onclick="limpiarPantalla()">Limpiar</button>
+  </div>
 
-  function colorPorCuota(c){if(c<2)return"blue";if(c<10)return"purple";return"pink";}
+  <div id="historial" style="margin-top:10px;overflow-x:auto;white-space:nowrap;"></div>
 
-  const referencePlugin = {
-    id:'referenceLines',
-    afterDraw:chart=>{
-      const ctx=chart.ctx;
-      const area=chart.chartArea;
-      const yScale=chart.scales['y'];
-      const data=chart.data.datasets[0].data;
-      if(!data.length)return;
+  <script>
+  document.addEventListener("DOMContentLoaded",()=>{
 
-      const maxVal=Math.max(...data);
-      const minVal=Math.min(...data);
-      const range=maxVal-minVal;
-      const soporte1=minVal+(range*0.25);
-      const soporte2=minVal+(range*0.1);
-      const resistencia1=maxVal-(range*0.25);
-      const resistencia2=maxVal-(range*0.1);
+    const display = document.getElementById("display");
+    const historialDiv = document.getElementById("historial");
+    const mensajeIA = document.getElementById("mensaje_ia");
+    const horaDiv = document.getElementById("hora");
+    const graficoCanvas = document.getElementById("grafico").getContext("2d");
 
-      const drawLine=(y,color)=>{const yPix=yScale.getPixelForValue(y);ctx.beginPath();ctx.moveTo(area.left,yPix);ctx.lineTo(area.right,yPix);ctx.lineWidth=2;ctx.strokeStyle=color;ctx.stroke();};
+    function colorPorCuota(c){ if(c < 2) return "blue"; if(c < 10) return "purple"; return "pink"; }
 
-      drawLine(0,'white');
-      drawLine(resistencia1,'red');
-      drawLine(resistencia2,'red');
-      drawLine(soporte1,'lime');
-      drawLine(soporte2,'lime');
+    function encontrarPicosYValles(arr){
+      const peaks = [], valleys = [];
+      for(let i=1;i<arr.length-1;i++){
+        if(arr[i] > arr[i-1] && arr[i] > arr[i+1]) peaks.push(arr[i]);
+        if(arr[i] < arr[i-1] && arr[i] < arr[i+1]) valleys.push(arr[i]);
+      }
+      const sortedDesc = [...arr].sort((a,b)=>b-a);
+      const sortedAsc  = [...arr].sort((a,b)=>a-b);
+      const uniq = (a)=>[...new Set(a)];
+      const p = uniq(peaks.concat(sortedDesc.slice(0,3))).sort((a,b)=>b-a).slice(0,2);
+      const v = uniq(valleys.concat(sortedAsc.slice(0,3))).sort((a,b)=>a-b).slice(0,2);
+      return {
+        max1: p[0] ?? sortedDesc[0],
+        max2: p[1] ?? (p[0] ?? sortedDesc[0]),
+        min1: v[0] ?? sortedAsc[0],
+        min2: v[1] ?? (v[0] ?? sortedAsc[0])
+      };
     }
-  };
 
-  const grafico=new Chart(graficoCanvas,{
-    type:'line',
-    data:{
-      labels:[],
-      datasets:[{
-        label:'Tendencia',
-        data:[],
-        borderColor:'cyan',
-        borderWidth:2,
-        pointRadius:5,
-        pointBackgroundColor:[],
-        tension:0
-      }]
-    },
-    options:{
-      responsive:true,
-      maintainAspectRatio:false,
-      plugins:{
-        legend:{display:false},
-        zoom:{
-          pan:{enabled:true,mode:'xy'},
-          zoom:{wheel:{enabled:true},pinch:{enabled:true},mode:'xy'}
+    const referencePlugin = {
+      id: 'referenceLines',
+      afterDraw: chart => {
+        const ctx = chart.ctx;
+        const area = chart.chartArea;
+        const yScale = chart.scales['y'];
+        const data = chart.data.datasets[0].data;
+        if(!data || data.length === 0) return;
+
+        const {max1,max2,min1,min2} = encontrarPicosYValles(data);
+
+        const drawLine = (y, color, width=2, dash=[]) => {
+          const yPixel = yScale.getPixelForValue(y);
+          ctx.save();
+          ctx.beginPath();
+          ctx.setLineDash(dash);
+          ctx.moveTo(area.left, yPixel);
+          ctx.lineTo(area.right, yPixel);
+          ctx.lineWidth = width;
+          ctx.strokeStyle = color;
+          ctx.stroke();
+          ctx.restore();
+        };
+
+        drawLine(0,'white',2,[]);
+        drawLine(max1,'red',2,[]);
+        if(max2!==max1) drawLine(max2,'red',1.5,[6,4]);
+        drawLine(min1,'lime',2,[]);
+        if(min2!==min1) drawLine(min2,'lime',1.5,[6,4]);
+
+        ctx.save();
+        ctx.font = '11px Arial';
+        ctx.fillStyle = 'white';
+        ctx.fillText('0', area.right - 22, yScale.getPixelForValue(0) - 6);
+        ctx.fillStyle = 'red';
+        ctx.fillText(max1.toFixed(2), area.right - 55, yScale.getPixelForValue(max1) - 6);
+        if(max2!==max1) ctx.fillText(max2.toFixed(2), area.right - 55, yScale.getPixelForValue(max2) + 10);
+        ctx.fillStyle = 'lime';
+        ctx.fillText(min1.toFixed(2), area.right - 55, yScale.getPixelForValue(min1) - 6);
+        if(min2!==min1) ctx.fillText(min2.toFixed(2), area.right - 55, yScale.getPixelForValue(min2) + 10);
+        ctx.restore();
+      }
+    };
+
+    const grafico = new Chart(graficoCanvas, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Tendencia',
+          data: [],
+          borderColor: 'cyan',
+          borderWidth: 2,
+          pointRadius: 5,
+          pointBackgroundColor: [],
+          tension: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'nearest', intersect: false },
+        plugins: {
+          legend: { display: false },
+          zoom: {
+            pan: { enabled: true, mode: 'xy', threshold: 5 },
+            zoom: {
+              wheel: { enabled: true, speed: 0.08 },
+              pinch: { enabled: true },
+              mode: 'xy'
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { color: 'cyan' }, grid: { color: '#222' } },
+          y: { ticks: { color: 'cyan' }, grid: { color: '#222' } }
         }
       },
-      scales:{
-        x:{ticks:{color:'cyan'},grid:{color:'#222'}},
-        y:{ticks:{color:'cyan'},grid:{color:'#222'}}
+      plugins: [ Chart.registry.getPlugin('zoom'), referencePlugin ]
+    });
+
+    const hammerArea = new Hammer(document.getElementById('grafico'));
+    hammerArea.get('pinch').set({ enable: true });
+    hammerArea.on('pinchstart pinchmove pinchend', e => e.preventDefault());
+
+    function actualizarGrafico(){
+      const cuotas = Array.from(historialDiv.children).map(s => parseFloat(s.innerText));
+      let valor = 0;
+      const serie = cuotas.map(c => { if (c < 2) valor -= 1; else valor += 1; return valor; });
+
+      grafico.data.labels = serie.map((_,i) => i+1);
+      grafico.data.datasets[0].data = serie;
+      grafico.data.datasets[0].pointBackgroundColor = cuotas.map(c => colorPorCuota(c));
+
+      const max = Math.max(...serie, 0);
+      const min = Math.min(...serie, 0);
+      const absMax = Math.max(Math.abs(max), Math.abs(min)) || 1;
+      grafico.options.scales.y.min = -absMax - 1;
+      grafico.options.scales.y.max = absMax + 1;
+
+      grafico.update('none');
+    }
+
+    async function _guardar(){
+      const cuota = parseFloat(display.innerText.trim());
+      if(isNaN(cuota)) return;
+      try{
+        const res = await fetch("/guardar", {
+          method:"POST",
+          headers:{"Content-Type":"application/x-www-form-urlencoded"},
+          body: new URLSearchParams({cuota})
+        });
+        const d = await res.json();
+        display.innerText = "";
+        mensajeIA.innerText = (d.prediccion && d.prediccion !== "clear") ? d.prediccion : "";
+        const span = document.createElement("span");
+        span.innerText = cuota.toFixed(2);
+        span.style.color = "white";
+        historialDiv.appendChild(span);
+        historialDiv.scrollLeft = historialDiv.scrollWidth;
+        actualizarGrafico();
+      }catch(err){
+        const span = document.createElement("span");
+        span.innerText = cuota.toFixed(2);
+        span.style.color = "white";
+        historialDiv.appendChild(span);
+        historialDiv.scrollLeft = historialDiv.scrollWidth;
+        actualizarGrafico();
       }
-    },
-    plugins:[Chart.registry.getPlugin('zoom'),referencePlugin]
+    }
+
+    async function _deshacer(){
+      await fetch("/borrar_ultimo",{method:"POST"});
+      if(historialDiv.lastChild) historialDiv.removeChild(historialDiv.lastChild);
+      mensajeIA.innerText = "";
+      actualizarGrafico();
+    }
+
+    async function _limpiarPantalla(){
+      if(!confirm("⚠️ ¿Seguro que deseas borrar el historial y reiniciar la pantalla?")) return;
+      await fetch("/limpiar_todo",{method:"POST"});
+      historialDiv.innerHTML = "";
+      mensajeIA.innerText = "";
+      display.innerText = "";
+      grafico.data.labels = [];
+      grafico.data.datasets[0].data = [];
+      grafico.update();
+    }
+
+    function _tecla(t){ if(t === "Borrar") display.innerText = display.innerText.slice(0,-1); else display.innerText += t; }
+
+    function actualizarHora(){ horaDiv.innerText = "🕒 "+ new Date().toLocaleTimeString('es-ES',{hour12:false}); }
+    setInterval(actualizarHora,1000);
+    actualizarHora();
+
+    window.tecla = _tecla;
+    window.guardar = _guardar;
+    window.deshacer = _deshacer;
+    window.limpiarPantalla = _limpiarPantalla;
+
+    document.getElementById('grafico').addEventListener('dblclick', ()=> grafico.resetZoom());
+    actualizarGrafico();
   });
-
-  function actualizarGrafico(){
-    const cuotas=Array.from(historialDiv.children).map(s=>parseFloat(s.innerText));
-    let valor=0;
-    const serie=cuotas.map(c=>{if(c<2){valor-=1;}else{valor+=1;}return valor;});
-    grafico.data.labels=serie.map((_,i)=>i+1);
-    grafico.data.datasets[0].data=serie;
-    grafico.data.datasets[0].pointBackgroundColor=cuotas.map(c=>colorPorCuota(c));
-
-    const max=Math.max(...serie,0);
-    const min=Math.min(...serie,0);
-    const absMax=Math.max(Math.abs(max),Math.abs(min))||1;
-    grafico.options.scales.y.min=-absMax-1;
-    grafico.options.scales.y.max=absMax+1;
-    grafico.update('none');
-  }
-
-  window.tecla=t=>{if(t==="Borrar")display.innerText=display.innerText.slice(0,-1);else display.innerText+=t;};
-  window.guardar=()=>{
-    const cuota=parseFloat(display.innerText.trim());
-    if(isNaN(cuota))return;
-    const span=document.createElement("span");
-    span.innerText=cuota.toFixed(2);
-    span.style.color="white";
-    historialDiv.appendChild(span);
-    historialDiv.scrollLeft=historialDiv.scrollWidth;
-    display.innerText="";
-    actualizarGrafico();
-  };
-  window.deshacer=()=>{
-    if(historialDiv.lastChild)historialDiv.removeChild(historialDiv.lastChild);
-    actualizarGrafico();
-  };
-  window.limpiarPantalla=()=>{
-    if(!confirm("⚠️ ¿Seguro que deseas borrar el historial y reiniciar la pantalla?"))return;
-    historialDiv.innerHTML="";
-    grafico.data.labels=[];
-    grafico.data.datasets[0].data=[];
-    grafico.update();
-    alert("✅ Pantalla e historial reiniciados.");
-  };
-
-  setInterval(()=>{horaDiv.innerText="🕒 "+new Date().toLocaleTimeString('es-ES',{hour12:false});},1000);
-
-  document.getElementById('grafico').addEventListener('dblclick',()=>grafico.resetZoom());
-  const ro=new MutationObserver(()=>actualizarGrafico());
-  ro.observe(historialDiv,{childList:true});
-  actualizarGrafico();
-});
-</script>
+  </script>
 </body>
 </html>
