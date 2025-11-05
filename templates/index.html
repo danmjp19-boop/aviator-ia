@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -14,7 +14,10 @@ h1 { color:#00ffff; }
 #analizarBtn { padding:6px 10px; background:cyan; color:#000; border:none; border-radius:8px; font-weight:bold; cursor:pointer; }
 #analizarBtn:hover { background:#0ff; }
 .titilar { animation: titilarAnim 1s infinite alternate; }
-@keyframes titilarAnim { 0% { box-shadow:0 0 5px cyan; color:cyan; } 100% { box-shadow:0 0 20px #00ffff; color:white; } }
+@keyframes titilarAnim { 
+  0% { box-shadow:0 0 5px cyan; color:cyan; } 
+  100% { box-shadow:0 0 20px #00ffff; color:white; } 
+}
 #display { background:#000; color:#0ff; font-size:2em; padding:10px; border:2px solid cyan; border-radius:10px; min-height:40px; margin-bottom:15px; width:100%; }
 .teclado button { width:30%; margin:5px; padding:10px; font-size:1.2em; border-radius:10px; background:#022; color:cyan; border:1px solid #0ff; cursor:pointer; }
 .acciones { margin-top:10px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; width:100%; }
@@ -22,7 +25,7 @@ h1 { color:#00ffff; }
 .limpiar { background:#f00; color:white; margin-top:20px; width:100%; font-weight:bold; border:2px solid #faa; transition:all 0.2s ease; }
 .limpiar:hover { background:#c00; box-shadow:0 0 10px red; }
 #mensaje_ia { margin-top:15px; font-size:1.2em; color:lime; min-height:1.5em; transition:opacity .3s ease; }
-#grafico { background:#000; border:2px solid cyan; border-radius:10px; margin-top:15px; height:250px; width:100%; }
+#grafico { background:#000; border:2px solid cyan; border-radius:10px; margin-top:15px; height:250px; width:100%; touch-action:pan-y pinch-zoom; }
 #historial { margin-top:15px; display:flex; flex-wrap:nowrap; overflow-x:auto; overflow-y:hidden; justify-content:flex-start; gap:6px; scrollbar-width:thin; scroll-behavior:smooth; padding-bottom:10px; border-top:1px solid cyan; border-bottom:1px solid cyan; width:100%; }
 #historial span { background:#033; padding:5px 10px; border-radius:5px; color:white; white-space:nowrap; flex-shrink:0; font-weight:bold; }
 .user-bar { margin-bottom:10px; text-align:center; font-size:0.95em; }
@@ -64,9 +67,7 @@ h1 { color:#00ffff; }
   <button class="limpiar" onclick="limpiarPantalla()">🧹 Limpiar Pantalla</button>
 
   <div id="mensaje_ia"></div>
-  <div style="width:100%;">
-    <div id="grafico"></div>
-  </div>
+  <div id="grafico"></div>
 </div>
 
 <h2>Historial</h2>
@@ -76,7 +77,7 @@ h1 { color:#00ffff; }
   {% endfor %}
 </div>
 
-<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded",()=>{
   const display=document.getElementById("display");
@@ -86,9 +87,8 @@ document.addEventListener("DOMContentLoaded",()=>{
   const input=document.getElementById("analisisInput");
   const btn=document.getElementById("analizarBtn");
   const graficoDiv=document.getElementById("grafico");
-  let tiempoObjetivo=null;
 
-  function colorPorCuota(c){if(c<2)return"blue";if(c<10)return"purple";return"pink";}
+  let tiempoObjetivo=null;
 
   function actualizarHora(){
     horaDiv.innerText="🕒 "+new Date().toLocaleTimeString('es-ES',{hour12:false});
@@ -98,6 +98,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   actualizarHora();
 
   function _tecla(t){if(t==="Borrar")display.innerText=display.innerText.slice(0,-1);else display.innerText+=t;}
+  function colorPorCuota(c){if(c<2)return"blue";if(c<10)return"purple";return"pink";}
 
   function _guardar(){
     const cuota=parseFloat(display.innerText.trim());
@@ -134,38 +135,47 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   function actualizarGrafico(){
     const cuotas=Array.from(historialDiv.children).map(s=>parseFloat(s.innerText));
-    if(cuotas.length===0){Plotly.purge(graficoDiv);return;}
-
-    let data=[],valor=0;
+    let data=[];let valor=0;
     cuotas.forEach(c=>{if(c<2)valor-=1;else valor+=1;data.push(valor);});
 
-    const soporte=Math.min(...data)*0.8;
-    const resistencia=Math.max(...data)*0.8;
+    const max=Math.max(...data,0);
+    const min=Math.min(...data,0);
+    const rango=Math.max(Math.abs(max),Math.abs(min))||1;
+    const soporte=-rango*0.7;
+    const resistencia=rango*0.7;
 
-    const trace={
+    const traceLinea={
       x:data.map((_,i)=>i+1),
       y:data,
-      mode:"lines+markers",
-      line:{color:"cyan",width:2},
-      marker:{color:cuotas.map(c=>colorPorCuota(c)),size:6},
-      name:"Tendencia"
+      mode:'lines+markers',
+      line:{color:'cyan',width:2},
+      marker:{size:5,color:data.map((v,i)=>colorPorCuota(cuotas[i]))},
+      name:'Tendencia'
     };
 
     const layout={
-      paper_bgcolor:"black",
-      plot_bgcolor:"black",
-      font:{color:"white"},
-      xaxis:{gridcolor:"#222"},
-      yaxis:{gridcolor:"#222"},
-      margin:{l:40,r:10,t:20,b:30},
+      paper_bgcolor:'black',
+      plot_bgcolor:'black',
+      font:{color:'white'},
+      showlegend:false,
+      margin:{t:10,b:30,l:30,r:10},
+      xaxis:{gridcolor:'#222',zeroline:false},
+      yaxis:{
+        gridcolor:'#222',
+        zeroline:true,
+        zerolinecolor:'white',
+        zerolinewidth:2,
+        range:[-rango-1,rango+1]
+      },
       shapes:[
-        {type:"line",x0:0,x1:data.length+1,y0:0,y1:0,line:{color:"white",width:2}},
-        {type:"line",x0:0,x1:data.length+1,y0:soporte,y1:soporte,line:{color:"lime",width:2}},
-        {type:"line",x0:0,x1:data.length+1,y0:resistencia,y1:resistencia,line:{color:"red",width:2}}
+        {type:'line',x0:0,x1:data.length+1,y0:soporte,y1:soporte,line:{color:'lime',width:2}},
+        {type:'line',x0:0,x1:data.length+1,y0:resistencia,y1:resistencia,line:{color:'red',width:2}}
       ]
     };
 
-    Plotly.newPlot(graficoDiv,[trace],layout,{scrollZoom:true,responsive:true,displayModeBar:false});
+    const config={scrollZoom:true,doubleClick:'reset',displayModeBar:false,responsive:true};
+
+    Plotly.newPlot(graficoDiv,[traceLinea],layout,config);
   }
 
   function analizarEntrada(){
