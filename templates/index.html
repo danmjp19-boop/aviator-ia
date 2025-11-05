@@ -5,27 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>✈️ Aviator Pronosticador IA</title>
 <style>
-/* --- Tus estilos originales --- */
-body { background:#000; color:cyan; font-family:Arial,sans-serif; text-align:center; margin:0; padding:20px;}
+body{background:#000;color:cyan;font-family:Arial,sans-serif;text-align:center;margin:0;padding:20px;}
 h1{color:#00ffff;margin:6px 0;}
 .container{max-width:400px;margin:0 auto;background:#111;padding:20px;border-radius:15px;box-shadow:0 0 15px cyan;display:flex;flex-direction:column;align-items:center;}
 #hora-analisis{display:flex;justify-content:space-between;align-items:center;width:100%;margin-bottom:10px;}
 #hora{font-size:1.2em;color:#0ff;letter-spacing:1px;}
-#analisisInput{width:120px;padding:5px;border:1px solid cyan;background:#000;color:cyan;border-radius:8px;text-align:center;transition:all .3s ease;}
+#analisisInput{width:120px;padding:5px;border:1px solid cyan;background:#000;color:cyan;border-radius:8px;text-align:center;}
 #analizarBtn{padding:6px 10px;background:cyan;color:#000;border:none;border-radius:8px;font-weight:bold;cursor:pointer;}
-.titilar{animation: titilarAnim 1s infinite alternate;}
-@keyframes titilarAnim{0%{box-shadow:0 0 5px cyan;color:cyan;}100%{box-shadow:0 0 20px #00ffff;color:white;}}
 #display{background:#000;color:#0ff;font-size:2em;padding:10px;border:2px solid cyan;border-radius:10px;min-height:40px;margin-bottom:15px;width:100%;}
 .teclado button{width:30%;margin:5px;padding:10px;font-size:1.2em;border-radius:10px;background:#022;color:cyan;border:1px solid #0ff;cursor:pointer;}
 .acciones{margin-top:10px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;width:100%;}
 .acciones button{flex:1;padding:10px;border-radius:10px;background:cyan;color:black;font-weight:bold;cursor:pointer;}
-.limpiar{background:#f00;color:white;margin-top:20px;width:100%;font-weight:bold;border:2px solid #faa;transition:all 0.2s ease;}
-.limpiar:hover{background:#c00;box-shadow:0 0 10px red;}
-#mensaje_ia{margin-top:15px;font-size:1.2em;color:lime;min-height:1.5em;transition:opacity .3s ease;}
-#graficoWrap{width:100%;height:260px;background:#000;border:2px solid cyan;border-radius:10px;padding:8px;box-sizing:border-box;overflow:hidden;margin-top:12px;}
-canvas{width:100% !important;height:100% !important;display:block;}
-#historial{margin-top:15px;display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;justify-content:flex-start;gap:6px;scrollbar-width:thin;scroll-behavior:smooth;padding-bottom:10px;border-top:1px solid cyan;border-bottom:1px solid cyan;width:100%;}
-#historial span{background:#033;padding:5px 10px;border-radius:5px;color:white;white-space:nowrap;flex-shrink:0;font-weight:bold;}
+.limpiar{background:#f00;color:white;margin-top:20px;width:100%;font-weight:bold;border:2px solid #faa;}
+#graficoWrap{width:100%;height:260px;background:#000;border:2px solid cyan;border-radius:10px;padding:8px;margin-top:12px;}
+canvas{width:100%!important;height:100%!important;display:block;}
+#mensaje_ia{margin-top:15px;font-size:1.2em;color:lime;min-height:1.5em;}
+#historial{margin-top:15px;display:flex;overflow-x:auto;gap:6px;padding-bottom:10px;border-top:1px solid cyan;border-bottom:1px solid cyan;width:100%;}
+#historial span{background:#033;padding:5px 10px;border-radius:5px;color:white;white-space:nowrap;font-weight:bold;}
 .user-bar{margin-bottom:10px;text-align:center;font-size:0.95em;}
 .user-bar span{color:#0ff;font-weight:bold;}
 .user-bar a{color:#ff5555;text-decoration:none;font-weight:bold;margin-left:8px;}
@@ -78,84 +74,130 @@ canvas{width:100% !important;height:100% !important;display:block;}
   {% endfor %}
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1/dist/chartjs-plugin-zoom.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1"></script>
+<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1"></script>
 
 <script>
 document.addEventListener("DOMContentLoaded",()=>{
 
-  const display = document.getElementById("display");
-  const historialDiv = document.getElementById("historial");
-  const mensajeIA = document.getElementById("mensaje_ia");
-  const horaDiv = document.getElementById("hora");
-  const input = document.getElementById("analisisInput");
-  const btn = document.getElementById("analizarBtn");
-  const graficoCanvas = document.getElementById("grafico").getContext("2d");
+  const display=document.getElementById("display");
+  const historialDiv=document.getElementById("historial");
+  const mensajeIA=document.getElementById("mensaje_ia");
+  const horaDiv=document.getElementById("hora");
+  const input=document.getElementById("analisisInput");
+  const btn=document.getElementById("analizarBtn");
+  const graficoCanvas=document.getElementById("grafico").getContext("2d");
 
-  function colorPorCuota(c){ if(c < 2) return "blue"; if(c < 10) return "purple"; return "pink"; }
+  function colorPorCuota(c){if(c<2)return"blue";if(c<10)return"purple";return"pink";}
 
-  // 🔥 ACTUALIZADO: Soporte/Resistencia según máximos y mínimos reales
-  const referencePlugin = {
-    id: 'referenceLines',
-    afterDraw: chart => {
-      const ctx = chart.ctx;
-      const area = chart.chartArea;
-      const yScale = chart.scales['y'];
-      const data = chart.data.datasets[0].data;
-      if(!data || data.length === 0) return;
-
-      const maxVal = Math.max(...data);
-      const minVal = Math.min(...data);
-
-      const soporte = minVal;
-      const resistencia = maxVal;
-      const soporte2 = soporte + (resistencia - soporte) * 0.25;
-      const resistencia2 = resistencia - (resistencia - soporte) * 0.25;
-
-      const drawLine = (y, color, width=2) => {
-        const yPixel = yScale.getPixelForValue(y);
-        ctx.save();
-        ctx.beginPath();
-        ctx.moveTo(area.left, yPixel);
-        ctx.lineTo(area.right, yPixel);
-        ctx.lineWidth = width;
-        ctx.strokeStyle = color;
-        ctx.stroke();
-        ctx.restore();
+  // soporte y resistencia reales
+  const referencePlugin={
+    id:'referenceLines',
+    afterDraw:chart=>{
+      const ctx=chart.ctx,area=chart.chartArea,yScale=chart.scales['y'];
+      const data=chart.data.datasets[0].data;
+      if(!data||data.length===0)return;
+      const maxVal=Math.max(...data);
+      const minVal=Math.min(...data);
+      const soporte=minVal,resistencia=maxVal;
+      const soporte2=soporte+(resistencia-soporte)*0.25;
+      const resistencia2=resistencia-(resistencia-soporte)*0.25;
+      const drawLine=(y,color,w=2)=>{
+        const yPixel=yScale.getPixelForValue(y);
+        ctx.save();ctx.beginPath();
+        ctx.moveTo(area.left,yPixel);ctx.lineTo(area.right,yPixel);
+        ctx.lineWidth=w;ctx.strokeStyle=color;ctx.stroke();ctx.restore();
       };
-
-      drawLine(resistencia, 'red', 2);
-      drawLine(resistencia2, 'red', 1);
-      drawLine(soporte2, 'lime', 1);
-      drawLine(soporte, 'lime', 2);
-
-      ctx.save();
-      ctx.fillStyle = 'red';
-      ctx.font = '11px Arial';
-      ctx.fillText(resistencia.toFixed(2), area.right - 50, yScale.getPixelForValue(resistencia) - 6);
-      ctx.fillText(resistencia2.toFixed(2), area.right - 50, yScale.getPixelForValue(resistencia2) - 6);
-      ctx.fillStyle = 'lime';
-      ctx.fillText(soporte.toFixed(2), area.right - 50, yScale.getPixelForValue(soporte) - 6);
-      ctx.fillText(soporte2.toFixed(2), area.right - 50, yScale.getPixelForValue(soporte2) - 6);
-      ctx.restore();
+      drawLine(resistencia,'red',2);
+      drawLine(resistencia2,'red',1);
+      drawLine(soporte2,'lime',1);
+      drawLine(soporte,'lime',2);
     }
   };
 
-  const grafico = new Chart(graficoCanvas, {
-    type: 'line',
-    data: { labels: [], datasets: [{ label: 'Tendencia', data: [], borderColor: 'cyan', borderWidth: 2, pointRadius: 5, pointBackgroundColor: [], tension: 0 }] },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: 'nearest', intersect: false },
-      plugins: { legend: { display: false }, zoom: { pan: { enabled: true, mode: 'xy' }, zoom: { wheel: { enabled: true, speed: 0.08 }, pinch: { enabled: true }, mode: 'xy' } } },
-      scales: { x: { ticks: { color: 'cyan' }, grid: { color: '#222' } }, y: { ticks: { color: 'cyan' }, grid: { color: '#222' } } }
+  const grafico=new Chart(graficoCanvas,{
+    type:'line',
+    data:{labels:[],datasets:[{label:'Tendencia',data:[],borderColor:'cyan',borderWidth:2,pointRadius:5,pointBackgroundColor:[],tension:0}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},zoom:{pan:{enabled:true,mode:'xy'},zoom:{wheel:{enabled:true},pinch:{enabled:true},mode:'xy'}}},
+      scales:{x:{ticks:{color:'cyan'},grid:{color:'#222'}},y:{ticks:{color:'cyan'},grid:{color:'#222'}}}
     },
-    plugins: [Chart.registry.getPlugin('zoom'), referencePlugin]
+    plugins:[Chart.registry.getPlugin('zoom'),referencePlugin]
   });
 
-  // resto del código igual que el tuyo original...
+  function actualizarGrafico(){
+    const cuotas=[...historialDiv.children].map(s=>parseFloat(s.innerText));
+    let valor=0;
+    const serie=cuotas.map(c=>{valor+=(c<2?-1:1);return valor;});
+    grafico.data.labels=serie.map((_,i)=>i+1);
+    grafico.data.datasets[0].data=serie;
+    grafico.data.datasets[0].pointBackgroundColor=cuotas.map(c=>colorPorCuota(c));
+    const max=Math.max(...serie,0),min=Math.min(...serie,0);
+    const absMax=Math.max(Math.abs(max),Math.abs(min))||1;
+    grafico.options.scales.y.min=-absMax-1;
+    grafico.options.scales.y.max=absMax+1;
+    grafico.update('none');
+  }
+
+  window.tecla=t=>{
+    if(t==="Borrar")display.innerText=display.innerText.slice(0,-1);
+    else display.innerText+=t;
+  };
+
+  window.guardar=()=>{
+    const cuota=parseFloat(display.innerText.trim());
+    if(isNaN(cuota))return;
+    fetch("/guardar",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({cuota})})
+      .then(r=>r.json()).then(d=>{
+        display.innerText="";
+        mensajeIA.innerText=(d.prediccion&&d.prediccion!=="clear")?d.prediccion:"";
+        const span=document.createElement("span");
+        span.innerText=cuota.toFixed(2);
+        historialDiv.appendChild(span);
+        historialDiv.scrollLeft=historialDiv.scrollWidth;
+        actualizarGrafico();
+      });
+  };
+
+  window.deshacer=()=>{
+    fetch("/borrar_ultimo",{method:"POST"}).then(()=>{
+      if(historialDiv.lastChild)historialDiv.removeChild(historialDiv.lastChild);
+      mensajeIA.innerText="";actualizarGrafico();
+    });
+  };
+
+  window.limpiarPantalla=()=>{
+    if(!confirm("⚠️ ¿Seguro que deseas borrar el historial y reiniciar la pantalla?"))return;
+    fetch("/limpiar_todo",{method:"POST"}).then(()=>{
+      historialDiv.innerHTML="";mensajeIA.innerText="";display.innerText="";
+      grafico.data.labels=[];grafico.data.datasets[0].data=[];
+      grafico.update();alert("✅ Pantalla e historial reiniciados.");
+    });
+  };
+
+  btn.onclick=()=>{
+    const texto=input.value.trim();
+    const match=texto.match(/([\d.]+)x\s*(\d{2}):(\d{2}):(\d{2})/);
+    if(!match)return;
+    const mult=parseFloat(match[1]);
+    const h=parseInt(match[2]),m=parseInt(match[3]),s=parseInt(match[4]);
+    const base=new Date();base.setHours(h,m,s,0);
+    const nuevo=new Date(base.getTime()+mult*60000);
+    const nh=String(nuevo.getHours()).padStart(2,"0");
+    const nm=String(nuevo.getMinutes()).padStart(2,"0");
+    const ns=String(nuevo.getSeconds()).padStart(2,"0");
+    input.value=`${match[1]}x ${nh}:${nm}:${ns}`;
+  };
+
+  function actualizarHora(){horaDiv.innerText="🕒 "+new Date().toLocaleTimeString('es-ES',{hour12:false});}
+  setInterval(actualizarHora,1000);actualizarHora();
+
+  const ro=new MutationObserver(()=>actualizarGrafico());
+  ro.observe(historialDiv,{childList:true});
+  document.getElementById('grafico').addEventListener('dblclick',()=>grafico.resetZoom());
+  actualizarGrafico();
 });
 </script>
 </body>
