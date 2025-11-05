@@ -115,6 +115,8 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   function _tecla(t){if(t==="Borrar")display.innerText=display.innerText.slice(0,-1);else display.innerText+=t;}
 
+  function colorPorCuota(c){if(c<2)return"blue";if(c<10)return"purple";return"pink";}
+
   function _guardar(){
     const cuota=parseFloat(display.innerText.trim());
     if(isNaN(cuota))return;
@@ -154,8 +156,8 @@ document.addEventListener("DOMContentLoaded",()=>{
     cuotas.forEach(c=>{if(c<2)valor-=1;else valor+=1;data.push(valor);});
     grafico.data.labels=data.map((_,i)=>i+1);
     grafico.data.datasets[0].data=data;
-    grafico.data.datasets[0].borderColor="cyan";
-    grafico.data.datasets[0].pointBackgroundColor="cyan";
+    grafico.data.datasets[0].borderColor=cuotas.map(c=>colorPorCuota(c));
+    grafico.data.datasets[0].pointBackgroundColor=cuotas.map(c=>colorPorCuota(c));
     grafico.update();
 
     if(!usuarioMoviendoGrafico){
