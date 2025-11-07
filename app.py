@@ -212,29 +212,24 @@ def login():
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "").strip()
         user = User.query.filter_by(email=email).first()
+
         if not user or not check_password_hash(user.password, password):
             return render_template("login.html", error="Credenciales inválidas")
+
         if user.expires < datetime.utcnow().date():
             return render_template("login.html", error="⏳ El tiempo de uso ha expirado")
 
-        # Si el flag is_logged_in quedó como True pero la sesión actual no corresponde,
-        # considerarlo como un flag obsoleto y resetear para permitir re-login.
-        if user.is_logged_in and user.email != "danmjp@gmail.com":
-            if session.get("user") != user.email:
-                user.is_logged_in = False
-                db.session.commit()
-
-        # Permitir múltiples sesiones solo al admin
+        # 🔒 Mantener restricción de una sola sesión activa (no admin)
         if user.is_logged_in and user.email != "danmjp@gmail.com":
             return render_template("login.html", error="⚠️ Este usuario ya tiene una sesión activa")
 
-        # Si no es admin, marcar sesión activa
-        if user.email != "danmjp@gmail.com":
-            user.is_logged_in = True
-            db.session.commit()
+        # ✅ Permitir reingreso si sesión fue cerrada automáticamente
+        user.is_logged_in = True
+        db.session.commit()
 
         session["user"] = user.email
         return redirect(url_for("index"))
+
     return render_template("login.html")
 
 @app.route("/logout")
