@@ -52,7 +52,7 @@ class User(db.Model):
     created = db.Column(db.Date, default=datetime.utcnow)
     expires = db.Column(db.Date, nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
-    is_logged_in = db.Column(db.Boolean, default=False)
+    session_token = db.Column(db.String(200), nullable=True)  # nuevo control
 
 with app.app_context():
     db.create_all()
@@ -182,10 +182,14 @@ def login_required(f):
     from functools import wraps
     @wraps(f)
     def decorated(*args, **kwargs):
-        if "user" not in session:
+        if "user" not in session or "token" not in session:
             return redirect(url_for("login"))
         user = User.query.filter_by(email=session["user"]).first()
         if not user or user.expires < datetime.utcnow().date():
+            session.clear()
+            return redirect(url_for("login"))
+        # 🛑 Verifica que la sesión actual siga siendo válida
+        if user.session_token != session["token"]:
             session.clear()
             return redirect(url_for("login"))
         return f(*args, **kwargs)
@@ -208,26 +212,27 @@ def admin_required(f):
 # ===============================
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    import secrets
     if request.method == "POST":
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "").strip()
         user = User.query.filter_by(email=email).first()
-
         if not user or not check_password_hash(user.password, password):
             return render_template("login.html", error="Credenciales inválidas")
-
         if user.expires < datetime.utcnow().date():
             return render_template("login.html", error="⏳ El tiempo de uso ha expirado")
 
-        # 🔒 Mantener restricción de una sola sesión activa (no admin)
-        if user.is_logged_in and user.email != "danmjp@gmail.com":
+        # 🔒 Bloquear múltiples sesiones para usuarios normales
+        if not user.is_admin and user.session_token:
             return render_template("login.html", error="⚠️ Este usuario ya tiene una sesión activa")
 
-        # ✅ Permitir reingreso si sesión fue cerrada automáticamente
-        user.is_logged_in = True
+        # 🆕 Crear nuevo token y guardarlo
+        token = secrets.token_hex(16)
+        user.session_token = token
         db.session.commit()
 
         session["user"] = user.email
+        session["token"] = token
         return redirect(url_for("index"))
 
     return render_template("login.html")
@@ -237,7 +242,7 @@ def logout():
     if "user" in session:
         user = User.query.filter_by(email=session["user"]).first()
         if user:
-            user.is_logged_in = False
+            user.session_token = None
             db.session.commit()
     session.clear()
     return redirect(url_for("login"))
@@ -274,7 +279,7 @@ def admin_panel():
 def forzar_logout(id):
     user = User.query.get(id)
     if user and not user.is_admin:
-        user.is_logged_in = False
+        user.session_token = None
         db.session.commit()
     return redirect(url_for("admin_panel"))
 
