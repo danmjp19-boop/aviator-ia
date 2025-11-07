@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session   
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session    
 import pandas as pd
 import os
 import numpy as np
@@ -216,6 +216,13 @@ def login():
             return render_template("login.html", error="Credenciales inválidas")
         if user.expires < datetime.utcnow().date():
             return render_template("login.html", error="⏳ El tiempo de uso ha expirado")
+
+        # Si el flag is_logged_in quedó como True pero la sesión actual no corresponde,
+        # considerarlo como un flag obsoleto y resetear para permitir re-login.
+        if user.is_logged_in and user.email != "danmjp@gmail.com":
+            if session.get("user") != user.email:
+                user.is_logged_in = False
+                db.session.commit()
 
         # Permitir múltiples sesiones solo al admin
         if user.is_logged_in and user.email != "danmjp@gmail.com":
