@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session    
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session      
 import pandas as pd
 import os
 import numpy as np
@@ -11,6 +11,7 @@ import joblib
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate   # 👈 NUEVO
 import time
 
 app = Flask(__name__)
@@ -22,6 +23,7 @@ app.secret_key = "cambia_esta_clave_secreta_por_una_muy_larga"
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)   # 👈 NUEVO
 
 # ===============================
 # Configuración global
@@ -54,19 +56,7 @@ class User(db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     session_token = db.Column(db.String(200), nullable=True)  # nuevo control
 
-with app.app_context():
-    db.create_all()
-    admin = User.query.filter_by(email=ADMIN_USER).first()
-    if not admin:
-        admin = User(
-            email=ADMIN_USER,
-            password=generate_password_hash(ADMIN_PASS),
-            created=datetime.utcnow().date(),
-            expires=(datetime.utcnow() + timedelta(days=3650)).date(),
-            is_admin=True
-        )
-        db.session.add(admin)
-        db.session.commit()
+# ❌ Eliminado el bloque db.create_all(), ahora se hará con migraciones
 
 # ===============================
 # Funciones base IA
@@ -188,7 +178,6 @@ def login_required(f):
         if not user or user.expires < datetime.utcnow().date():
             session.clear()
             return redirect(url_for("login"))
-        # 🛑 Verifica que la sesión actual siga siendo válida
         if user.session_token != session["token"]:
             session.clear()
             return redirect(url_for("login"))
@@ -224,7 +213,7 @@ def login():
 
         # 🔒 Bloquear múltiples sesiones para usuarios normales
         if not user.is_admin and user.session_token:
-            return render_template("login.html", error="⚠️ Este usuario ya tiene una sesión activa")
+            return render_template("login.html", error="⚠️ Este usuario ya tiene una sesión activa en otro dispositivo")
 
         # 🆕 Crear nuevo token y guardarlo
         token = secrets.token_hex(16)
