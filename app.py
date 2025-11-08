@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session    
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session     
 import pandas as pd
 import os
 import numpy as np
@@ -188,7 +188,6 @@ def login_required(f):
         if not user or user.expires < datetime.utcnow().date():
             session.clear()
             return redirect(url_for("login"))
-        # 🛑 Verifica que la sesión actual siga siendo válida
         if user.session_token != session["token"]:
             session.clear()
             return redirect(url_for("login"))
@@ -224,7 +223,7 @@ def login():
 
         # 🔒 Bloquear múltiples sesiones para usuarios normales
         if not user.is_admin and user.session_token:
-            return render_template("login.html", error="⚠️ Este usuario ya tiene una sesión activa")
+            return render_template("login.html", error="⚠️ Este usuario ya tiene una sesión activa en otro dispositivo")
 
         # 🆕 Crear nuevo token y guardarlo
         token = secrets.token_hex(16)
