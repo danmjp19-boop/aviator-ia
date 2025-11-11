@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session      
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 import pandas as pd
 import os
 import numpy as np
@@ -11,19 +11,19 @@ import joblib
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate   # 👈 NUEVO
+from flask_migrate import Migrate
 import time
 
 app = Flask(__name__)
 app.secret_key = "cambia_esta_clave_secreta_por_una_muy_larga"
 
 # ===============================
-# 🔗 Configuración base de datos PostgreSQL
+# Configuración base de datos PostgreSQL
 # ===============================
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
-migrate = Migrate(app, db)   # 👈 NUEVO
+migrate = Migrate(app, db)
 
 # ===============================
 # Configuración global
@@ -31,6 +31,7 @@ migrate = Migrate(app, db)   # 👈 NUEVO
 DATA_PATH = os.path.join("static", "historial.csv")
 MODEL_PATH = os.path.join("static", "modelo_ia.keras")
 SCALER_PATH = os.path.join("static", "scaler.pkl")
+INTERVALOS_PATH = os.path.join("static", "intervalos.csv")
 
 historial = []
 model = None
@@ -40,7 +41,6 @@ MIN_SAMPLES = 10
 training_lock = threading.Lock()
 
 cuotas_altas = {}
-
 ADMIN_USER = "danmjp@gmail.com"
 ADMIN_PASS = "Colombia321*"
 
@@ -54,9 +54,7 @@ class User(db.Model):
     created = db.Column(db.Date, default=datetime.utcnow)
     expires = db.Column(db.Date, nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
-    session_token = db.Column(db.String(200), nullable=True)  # nuevo control
-
-# ❌ Eliminado el bloque db.create_all(), ahora se hará con migraciones
+    session_token = db.Column(db.String(200), nullable=True)
 
 # ===============================
 # Funciones base IA
@@ -166,6 +164,60 @@ def analizar_cuotas_altas():
                 del cuotas_altas[tiempo]
 
 # ===============================
+# 🔍 Análisis de intervalos temporales y patrones de color
+# ===============================
+def registrar_evento_y_analizar(valor_actual):
+    """Registra hora actual, analiza intervalos y patrones de color."""
+    ahora = datetime.now()
+
+    # --- Intervals ---
+    if not os.path.exists(INTERVALOS_PATH):
+        pd.DataFrame(columns=["hora_inicio", "hora_fin", "duracion_seg"]).to_csv(INTERVALOS_PATH, index=False)
+    df = pd.read_csv(INTERVALOS_PATH)
+    if not df.empty:
+        ultima_hora = datetime.strptime(df.iloc[-1]["hora_fin"], "%Y-%m-%d %H:%M:%S")
+        duracion = (ahora - ultima_hora).total_seconds()
+        nueva_fila = {
+            "hora_inicio": ultima_hora.strftime("%Y-%m-%d %H:%M:%S"),
+            "hora_fin": ahora.strftime("%Y-%m-%d %H:%M:%S"),
+            "duracion_seg": duracion
+        }
+        df = pd.concat([df, pd.DataFrame([nueva_fila])], ignore_index=True)
+    else:
+        df = pd.DataFrame([{
+            "hora_inicio": ahora.strftime("%Y-%m-%d %H:%M:%S"),
+            "hora_fin": ahora.strftime("%Y-%m-%d %H:%M:%S"),
+            "duracion_seg": 0
+        }])
+    df.to_csv(INTERVALOS_PATH, index=False)
+    if len(df) > 5:
+        ultimos = df["duracion_seg"].tail(10).values
+        analizar_patrones_intervalos(ultimos)
+
+    # --- Patrones de color ---
+    color_actual = ""
+    if valor_actual < 2.0:
+        color_actual = "Azul"
+    elif valor_actual < 10.0:
+        color_actual = "Morado"
+    else:
+        color_actual = "Rosado"
+
+    # Revisar patrones: si el color es Morado, avisar con el mismo mensaje
+    if color_actual == "Morado":
+        print("🟢 Pronóstico: próxima cuota probable mayor a 2.00 (por color Morado detectado)")
+
+def analizar_patrones_intervalos(valores):
+    """Detecta patrones o repeticiones en los intervalos de tiempo."""
+    if len(valores) < 5:
+        return
+    redondeados = [round(v / 10) * 10 for v in valores]
+    unicos, conteos = np.unique(redondeados, return_counts=True)
+    repetidos = {u: c for u, c in zip(unicos, conteos) if c > 1}
+    if repetidos:
+        print("🔁 Patrones de intervalo detectados:", repetidos)
+
+# ===============================
 # Decoradores de autenticación
 # ===============================
 def login_required(f):
@@ -210,20 +262,14 @@ def login():
             return render_template("login.html", error="Credenciales inválidas")
         if user.expires < datetime.utcnow().date():
             return render_template("login.html", error="⏳ El tiempo de uso ha expirado")
-
-        # 🔒 Bloquear múltiples sesiones para usuarios normales
         if not user.is_admin and user.session_token:
             return render_template("login.html", error="⚠️ Este usuario ya tiene una sesión activa en otro dispositivo")
-
-        # 🆕 Crear nuevo token y guardarlo
         token = secrets.token_hex(16)
         user.session_token = token
         db.session.commit()
-
         session["user"] = user.email
         session["token"] = token
         return redirect(url_for("index"))
-
     return render_template("login.html")
 
 @app.route("/logout")
@@ -260,15 +306,11 @@ def admin_panel():
         db.session.add(nuevo)
         db.session.commit()
         return redirect(url_for("admin_panel"))
-
     usuarios = User.query.all()
-
-    # ✅ Agregado: calcular si está activo y cuántos días le quedan
     hoy = datetime.utcnow().date()
     for u in usuarios:
         u.activo = bool(u.session_token)
         u.dias_restantes = (u.expires - hoy).days
-
     return render_template("admin.html", users=usuarios, admin=session.get("user"))
 
 @app.route("/forzar_logout/<int:id>")
@@ -324,6 +366,10 @@ def guardar():
         cuotas_altas[datetime.now()] = valor
     os.makedirs(os.path.dirname(DATA_PATH), exist_ok=True)
     pd.DataFrame(historial, columns=["cuota"]).to_csv(DATA_PATH, index=False)
+
+    # 🕒 Nuevo: registrar hora, analizar intervalos y color
+    registrar_evento_y_analizar(valor)
+
     entrenar_en_hilo()
     analizar_cuotas_altas()
     pred = predecir_con_neuronal(historial)
