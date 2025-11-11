@@ -27,6 +27,16 @@
     }
     .activo { background:limegreen; box-shadow:0 0 6px limegreen; }
     .inactivo { background:red; box-shadow:0 0 6px red; }
+
+    /* 🔵 Nuevo estilo para botón “Cerrar sesión” */
+    .logout-btn {
+        background:#09f;
+        color:#fff;
+        border:none;
+        padding:6px 10px;
+        border-radius:6px;
+        cursor:pointer;
+    }
 </style>
 </head>
 <body>
@@ -55,7 +65,6 @@
     <div class="panel" style="margin-top:12px;">
         <h3>Usuarios existentes</h3>
         <table>
-            <!-- ✅ Nueva columna “Días restantes” -->
             <thead>
                 <tr>
                     <th>Email</th>
@@ -75,15 +84,15 @@
                     </td>
                     <td>{{ u.created }}</td>
                     <td>{{ u.expires }}</td>
-
-                    <!-- 🔵 Muestra los días restantes -->
                     <td>{{ u.dias_restantes }} días</td>
-
                     <td>{{ 'Sí' if u.is_admin else 'No' }}</td>
                     <td>
                         {% if not u.is_admin %}
                         <button class="danger" onclick="eliminarUsuario({{ u.id }}, '{{ u.email }}')">Eliminar</button>
                         <button onclick="extenderUsuario({{ u.id }}, '{{ u.email }}')">Extender</button>
+                        {% if u.activo %}
+                        <button class="logout-btn" onclick="cerrarSesionUsuario({{ u.id }}, '{{ u.email }}')">Cerrar sesión</button>
+                        {% endif %}
                         {% else %}
                         <span class="small">Cuenta admin</span>
                         {% endif %}
@@ -118,6 +127,12 @@ function extenderUsuario(id, email){
     form.appendChild(input);
     document.body.appendChild(form);
     form.submit();
+}
+
+/* 🔵 Nueva función para cerrar sesión */
+function cerrarSesionUsuario(id, email){
+    if(!confirm("¿Cerrar sesión de " + email + "?")) return;
+    window.location.href = "/forzar_logout/" + id;
 }
 </script>
 </body>
