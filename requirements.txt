@@ -11,5 +11,3 @@ psycopg2-binary==2.9.9
 waitress==3.0.0
 Flask-Migrate==4.0.5
 alembic==1.14.0
-eventlet>=0.33.0
-flask-socketio==5.3.6
