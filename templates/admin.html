@@ -16,6 +16,30 @@
     .small { font-size:0.9em; color:#9ff; }
     .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
     a.logout { color:#0ff; text-decoration:none; border:1px solid #0ff; padding:6px 10px; border-radius:6px; }
+
+    /* 🔘 Estilos añadidos para los botones de estado */
+    .estado {
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        gap:10px;
+        margin-bottom:15px;
+    }
+    .estado button {
+        border:none;
+        border-radius:8px;
+        padding:8px 16px;
+        font-weight:bold;
+        cursor:pointer;
+        color:white;
+        font-size:1em;
+        box-shadow:0 0 8px #0ff;
+        transition:all 0.3s ease;
+    }
+    .btn-activo { background:limegreen; box-shadow:0 0 10px lime; }
+    .btn-inactivo { background:red; box-shadow:0 0 10px red; }
+    .btn-activo:hover { background:#00ff66; }
+    .btn-inactivo:hover { background:#ff4444; }
 </style>
 </head>
 <body>
@@ -26,6 +50,12 @@
             <span class="small">Admin: {{ admin }}</span>
             &nbsp; <a class="logout" href="{{ url_for('logout') }}">Cerrar sesión</a>
         </div>
+    </div>
+
+    <!-- 🔘 Bloque agregado: botón de estado -->
+    <div class="estado">
+        <button class="btn-activo" id="btnActivo">🟢 Activo</button>
+        <button class="btn-inactivo" id="btnInactivo">🔴 Inactivo</button>
     </div>
 
     <div class="panel">
@@ -91,6 +121,19 @@ function extenderUsuario(id, email){
     document.body.appendChild(form);
     form.submit();
 }
+
+/* 🔘 Script agregado solo para alternar visualmente los botones (opcional) */
+const btnActivo = document.getElementById('btnActivo');
+const btnInactivo = document.getElementById('btnInactivo');
+
+btnActivo.addEventListener('click', () => {
+    btnActivo.style.opacity = "1";
+    btnInactivo.style.opacity = "0.5";
+});
+btnInactivo.addEventListener('click', () => {
+    btnInactivo.style.opacity = "1";
+    btnActivo.style.opacity = "0.5";
+});
 </script>
 </body>
 </html>
