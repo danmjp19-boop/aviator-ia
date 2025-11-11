@@ -260,7 +260,13 @@ def admin_panel():
         db.session.add(nuevo)
         db.session.commit()
         return redirect(url_for("admin_panel"))
+
     usuarios = User.query.all()
+
+    # ✅ Agregado: propiedad temporal 'activo' (NO modifica la base de datos)
+    for u in usuarios:
+        u.activo = bool(u.session_token)
+
     return render_template("admin.html", users=usuarios, admin=session.get("user"))
 
 @app.route("/forzar_logout/<int:id>")
