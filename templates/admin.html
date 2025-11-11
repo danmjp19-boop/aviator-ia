@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="es">
 <head>
 <meta charset="utf-8" />
@@ -17,7 +17,7 @@
     .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
     a.logout { color:#0ff; text-decoration:none; border:1px solid #0ff; padding:6px 10px; border-radius:6px; }
 
-    /* 🔵 Agregado: indicador de estado */
+    /* 🔵 Indicador de estado */
     .estado {
         display:inline-block;
         width:10px;
@@ -55,17 +55,30 @@
     <div class="panel" style="margin-top:12px;">
         <h3>Usuarios existentes</h3>
         <table>
-            <thead><tr><th>Email</th><th>Creado</th><th>Expira</th><th>Admin</th><th>Acciones</th></tr></thead>
+            <!-- ✅ Nueva columna “Días restantes” -->
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Creado</th>
+                    <th>Expira</th>
+                    <th>Días restantes</th>
+                    <th>Admin</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
             <tbody id="users_table">
             {% for u in users %}
                 <tr>
                     <td>
-                        <!-- 🔵 Agregado: indicador activo/inactivo -->
                         <span class="estado {% if u.activo %}activo{% else %}inactivo{% endif %}"></span>
                         {{ u.email }}
                     </td>
                     <td>{{ u.created }}</td>
                     <td>{{ u.expires }}</td>
+
+                    <!-- 🔵 Muestra los días restantes -->
+                    <td>{{ u.dias_restantes }} días</td>
+
                     <td>{{ 'Sí' if u.is_admin else 'No' }}</td>
                     <td>
                         {% if not u.is_admin %}

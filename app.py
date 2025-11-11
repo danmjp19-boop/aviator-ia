@@ -263,9 +263,11 @@ def admin_panel():
 
     usuarios = User.query.all()
 
-    # ✅ Agregado: propiedad temporal 'activo' (NO modifica la base de datos)
+    # ✅ Agregado: calcular si está activo y cuántos días le quedan
+    hoy = datetime.utcnow().date()
     for u in usuarios:
         u.activo = bool(u.session_token)
+        u.dias_restantes = (u.expires - hoy).days
 
     return render_template("admin.html", users=usuarios, admin=session.get("user"))
 
