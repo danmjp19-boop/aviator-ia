@@ -55,8 +55,7 @@ class User(db.Model):
     expires = db.Column(db.Date, nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
     session_token = db.Column(db.String(200), nullable=True)  # nuevo control
-
-# ❌ Eliminado el bloque db.create_all(), ahora se hará con migraciones
+    last_login = db.Column(db.DateTime, nullable=True)  # 🆕 Fecha y hora del último inicio de sesión
 
 # ===============================
 # Funciones base IA
@@ -215,9 +214,10 @@ def login():
         if not user.is_admin and user.session_token:
             return render_template("login.html", error="⚠️ Este usuario ya tiene una sesión activa en otro dispositivo")
 
-        # 🆕 Crear nuevo token y guardarlo
+        # 🆕 Crear nuevo token y guardar hora de inicio de sesión
         token = secrets.token_hex(16)
         user.session_token = token
+        user.last_login = datetime.utcnow()  # 🕒 Guardamos la hora de inicio de sesión
         db.session.commit()
 
         session["user"] = user.email
@@ -263,41 +263,21 @@ def admin_panel():
 
     usuarios = User.query.all()
 
-    # ✅ Agregado: calcular si está activo y cuántos días le quedan
-    hoy = datetime.utcnow().date()
+    # ✅ Propiedades temporales
     for u in usuarios:
         u.activo = bool(u.session_token)
-        u.dias_restantes = (u.expires - hoy).days
+        u.dias_restantes = (u.expires - datetime.utcnow().date()).days
+
+        # 🕒 Calcular tiempo activo si está logueado
+        if u.last_login and u.session_token:
+            delta = datetime.utcnow() - u.last_login
+            horas = delta.seconds // 3600
+            minutos = (delta.seconds % 3600) // 60
+            u.tiempo_activo = f"{horas}h {minutos}min"
+        else:
+            u.tiempo_activo = "-"
 
     return render_template("admin.html", users=usuarios, admin=session.get("user"))
-
-@app.route("/forzar_logout/<int:id>")
-@admin_required
-def forzar_logout(id):
-    user = User.query.get(id)
-    if user and not user.is_admin:
-        user.session_token = None
-        db.session.commit()
-    return redirect(url_for("admin_panel"))
-
-@app.route("/eliminar_usuario/<int:id>")
-@admin_required
-def eliminar_usuario(id):
-    user = User.query.get(id)
-    if user and not user.is_admin:
-        db.session.delete(user)
-        db.session.commit()
-    return redirect(url_for("admin_panel"))
-
-@app.route("/extender_usuario/<int:id>", methods=["POST"])
-@admin_required
-def extender_usuario(id):
-    dias = int(request.form.get("dias", 1))
-    user = User.query.get(id)
-    if user:
-        user.expires += timedelta(days=dias)
-        db.session.commit()
-    return redirect(url_for("admin_panel"))
 
 # ===============================
 # IA Routes
