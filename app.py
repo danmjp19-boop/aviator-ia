@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session      
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 import pandas as pd
 import os
 import numpy as np
@@ -11,8 +11,11 @@ import joblib
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate   # 👈 NUEVO
+from flask_migrate import Migrate
 import time
+
+# 🔵 NUEVO: SocketIO
+from flask_socketio import SocketIO, emit
 
 app = Flask(__name__)
 app.secret_key = "cambia_esta_clave_secreta_por_una_muy_larga"
@@ -23,7 +26,10 @@ app.secret_key = "cambia_esta_clave_secreta_por_una_muy_larga"
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
-migrate = Migrate(app, db)   # 👈 NUEVO
+migrate = Migrate(app, db)
+
+# 🔵 NUEVO: inicializar SocketIO
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # ===============================
 # Configuración global
@@ -54,9 +60,7 @@ class User(db.Model):
     created = db.Column(db.Date, default=datetime.utcnow)
     expires = db.Column(db.Date, nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
-    session_token = db.Column(db.String(200), nullable=True)  # nuevo control
-
-# ❌ Eliminado el bloque db.create_all(), ahora se hará con migraciones
+    session_token = db.Column(db.String(200), nullable=True)
 
 # ===============================
 # Funciones base IA
@@ -211,19 +215,17 @@ def login():
         if user.expires < datetime.utcnow().date():
             return render_template("login.html", error="⏳ El tiempo de uso ha expirado")
 
-        # 🔒 Bloquear múltiples sesiones para usuarios normales
         if not user.is_admin and user.session_token:
             return render_template("login.html", error="⚠️ Este usuario ya tiene una sesión activa en otro dispositivo")
 
-        # 🆕 Crear nuevo token y guardarlo
         token = secrets.token_hex(16)
         user.session_token = token
         db.session.commit()
 
         session["user"] = user.email
         session["token"] = token
+        session["user_id"] = user.id  # 🔵 nuevo: guardar ID
         return redirect(url_for("index"))
-
     return render_template("login.html")
 
 @app.route("/logout")
@@ -262,8 +264,6 @@ def admin_panel():
         return redirect(url_for("admin_panel"))
 
     usuarios = User.query.all()
-
-    # ✅ Agregado: calcular si está activo y cuántos días le quedan
     hoy = datetime.utcnow().date()
     for u in usuarios:
         u.activo = bool(u.session_token)
@@ -278,6 +278,7 @@ def forzar_logout(id):
     if user and not user.is_admin:
         user.session_token = None
         db.session.commit()
+        socketio.emit("force_logout", {"user_id": id})  # 🔵 enviar evento en vivo
     return redirect(url_for("admin_panel"))
 
 @app.route("/eliminar_usuario/<int:id>")
@@ -307,7 +308,8 @@ def extender_usuario(id):
 def index():
     cargar_historial()
     usuario_actual = session.get("user", "Desconocido")
-    return render_template("index.html", historial=historial, usuario=usuario_actual)
+    user_id = session.get("user_id", 0)
+    return render_template("index.html", historial=historial, usuario=usuario_actual, user_id=user_id)
 
 @app.route("/guardar", methods=["POST"])
 @login_required
@@ -357,5 +359,4 @@ if __name__ == "__main__":
     cargar_historial()
     cargar_modelo_y_scaler()
     entrenar_en_hilo()
-    from waitress import serve
-    serve(app, host="0.0.0.0", port=5000)
+    socketio.run(app, host="0.0.0.0", port=5000)
