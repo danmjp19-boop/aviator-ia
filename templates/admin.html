@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8" />
@@ -17,7 +17,6 @@
     .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
     a.logout { color:#0ff; text-decoration:none; border:1px solid #0ff; padding:6px 10px; border-radius:6px; }
 
-    /* 🔵 Indicador de estado */
     .estado {
         display:inline-block;
         width:10px;
@@ -28,7 +27,6 @@
     .activo { background:limegreen; box-shadow:0 0 6px limegreen; }
     .inactivo { background:red; box-shadow:0 0 6px red; }
 
-    /* 🔵 Nuevo estilo para botón “Cerrar sesión” */
     .logout-btn {
         background:#09f;
         color:#fff;
@@ -91,7 +89,7 @@
                         <button class="danger" onclick="eliminarUsuario({{ u.id }}, '{{ u.email }}')">Eliminar</button>
                         <button onclick="extenderUsuario({{ u.id }}, '{{ u.email }}')">Extender</button>
                         {% if u.activo %}
-                        <button class="logout-btn" onclick="cerrarSesionUsuario({{ u.id }}, '{{ u.email }}')">Cerrar sesión</button>
+                        <button class="logout-btn" onclick="cerrarSesionUsuario('{{ u.email }}')">Cerrar sesión</button>
                         {% endif %}
                         {% else %}
                         <span class="small">Cuenta admin</span>
@@ -108,7 +106,29 @@
     </div>
 </div>
 
+<!-- 🔵 Socket.IO -->
+<script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
 <script>
+const socket = io();
+
+// 🔵 Cerrar sesión de un usuario (llama al backend)
+function cerrarSesionUsuario(email){
+    if(!confirm("¿Cerrar sesión de " + email + "?")) return;
+    fetch("/admin/cerrar_sesion_usuario", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if(data.success){
+            alert("✅ Sesión cerrada para " + email);
+        } else {
+            alert("⚠️ Error: " + (data.error || "no se pudo cerrar sesión"));
+        }
+    });
+}
+
 function eliminarUsuario(id, email){
     if(!confirm("¿Eliminar usuario " + email + "?")) return;
     window.location.href = "/eliminar_usuario/" + id;
@@ -127,12 +147,6 @@ function extenderUsuario(id, email){
     form.appendChild(input);
     document.body.appendChild(form);
     form.submit();
-}
-
-/* 🔵 Nueva función para cerrar sesión */
-function cerrarSesionUsuario(id, email){
-    if(!confirm("¿Cerrar sesión de " + email + "?")) return;
-    window.location.href = "/forzar_logout/" + id;
 }
 </script>
 </body>
