@@ -55,14 +55,13 @@
     <div class="panel" style="margin-top:12px;">
         <h3>Usuarios existentes</h3>
         <table>
-            <!-- ✅ Nueva columna “Días restantes” y “Tiempo activo” -->
+            <!-- ✅ Nueva columna “Días restantes” -->
             <thead>
                 <tr>
                     <th>Email</th>
                     <th>Creado</th>
                     <th>Expira</th>
                     <th>Días restantes</th>
-                    <th>Tiempo activo</th> <!-- ✅ NUEVA COLUMNA -->
                     <th>Admin</th>
                     <th>Acciones</th>
                 </tr>
@@ -79,9 +78,6 @@
 
                     <!-- 🔵 Muestra los días restantes -->
                     <td>{{ u.dias_restantes }} días</td>
-
-                    <!-- 🕒 Tiempo activo legible -->
-                    <td>{{ u.tiempo_activo }}</td>
 
                     <td>{{ 'Sí' if u.is_admin else 'No' }}</td>
                     <td>

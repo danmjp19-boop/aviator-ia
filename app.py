@@ -11,7 +11,7 @@ import joblib
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
+from flask_migrate import Migrate   # 👈 NUEVO
 import time
 
 app = Flask(__name__)
@@ -23,7 +23,7 @@ app.secret_key = "cambia_esta_clave_secreta_por_una_muy_larga"
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
-migrate = Migrate(app, db)
+migrate = Migrate(app, db)   # 👈 NUEVO
 
 # ===============================
 # Configuración global
@@ -54,8 +54,9 @@ class User(db.Model):
     created = db.Column(db.Date, default=datetime.utcnow)
     expires = db.Column(db.Date, nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
-    session_token = db.Column(db.String(200), nullable=True)
-    last_login = db.Column(db.DateTime, nullable=True)  # ✅ NUEVO
+    session_token = db.Column(db.String(200), nullable=True)  # nuevo control
+
+# ❌ Eliminado el bloque db.create_all(), ahora se hará con migraciones
 
 # ===============================
 # Funciones base IA
@@ -210,12 +211,13 @@ def login():
         if user.expires < datetime.utcnow().date():
             return render_template("login.html", error="⏳ El tiempo de uso ha expirado")
 
+        # 🔒 Bloquear múltiples sesiones para usuarios normales
         if not user.is_admin and user.session_token:
             return render_template("login.html", error="⚠️ Este usuario ya tiene una sesión activa en otro dispositivo")
 
+        # 🆕 Crear nuevo token y guardarlo
         token = secrets.token_hex(16)
         user.session_token = token
-        user.last_login = datetime.utcnow()  # ✅ NUEVO: guardar hora de inicio
         db.session.commit()
 
         session["user"] = user.email
@@ -260,18 +262,12 @@ def admin_panel():
         return redirect(url_for("admin_panel"))
 
     usuarios = User.query.all()
+
+    # ✅ Agregado: calcular si está activo y cuántos días le quedan
     hoy = datetime.utcnow().date()
     for u in usuarios:
         u.activo = bool(u.session_token)
         u.dias_restantes = (u.expires - hoy).days
-        # ✅ Calcular tiempo activo legible
-        if u.last_login:
-            delta = datetime.utcnow() - u.last_login
-            horas, resto = divmod(delta.total_seconds(), 3600)
-            minutos = int(resto // 60)
-            u.tiempo_activo = f"{int(horas)}h {minutos}m"
-        else:
-            u.tiempo_activo = "—"
 
     return render_template("admin.html", users=usuarios, admin=session.get("user"))
 
