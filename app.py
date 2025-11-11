@@ -14,26 +14,27 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 import time
 
-# 🔵 NUEVO: SocketIO
+# 🔵 SocketIO
 from flask_socketio import SocketIO, emit
 
+# ============================================================
+# CONFIGURACIÓN BASE
+# ============================================================
 app = Flask(__name__)
 app.secret_key = "cambia_esta_clave_secreta_por_una_muy_larga"
 
-# ===============================
-# 🔗 Configuración base de datos PostgreSQL
-# ===============================
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
-# 🔵 NUEVO: inicializar SocketIO
+# 🔵 Inicializar SocketIO
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# ===============================
-# Configuración global
-# ===============================
+# ============================================================
+# VARIABLES GLOBALES
+# ============================================================
 DATA_PATH = os.path.join("static", "historial.csv")
 MODEL_PATH = os.path.join("static", "modelo_ia.keras")
 SCALER_PATH = os.path.join("static", "scaler.pkl")
@@ -50,9 +51,9 @@ cuotas_altas = {}
 ADMIN_USER = "danmjp@gmail.com"
 ADMIN_PASS = "Colombia321*"
 
-# ===============================
-# Modelo de Usuario (SQLAlchemy)
-# ===============================
+# ============================================================
+# MODELO DE USUARIO
+# ============================================================
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -62,9 +63,9 @@ class User(db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     session_token = db.Column(db.String(200), nullable=True)
 
-# ===============================
-# Funciones base IA
-# ===============================
+# ============================================================
+# FUNCIONES IA
+# ============================================================
 def cargar_historial():
     global historial
     if os.path.exists(DATA_PATH):
@@ -89,15 +90,13 @@ def cargar_modelo_y_scaler():
     global model, scaler
     try:
         if os.path.exists(SCALER_PATH):
-            scaler_local = joblib.load(SCALER_PATH)
-            scaler = scaler_local
+            scaler = joblib.load(SCALER_PATH)
         if os.path.exists(MODEL_PATH):
             model_local = load_model(MODEL_PATH)
             if model_local.input_shape[1] != WINDOW:
                 model_local = construir_modelo(WINDOW)
                 scaler_local = MinMaxScaler()
             model = model_local
-            scaler = scaler_local
         else:
             model = construir_modelo(WINDOW)
             scaler = MinMaxScaler()
@@ -159,21 +158,12 @@ def predecir_con_neuronal(hist):
     else:
         return "clear"
 
-def analizar_cuotas_altas():
-    global cuotas_altas
-    ahora = datetime.now()
-    for tiempo, valor in list(cuotas_altas.items()):
-        if ahora >= tiempo + timedelta(minutes=4) and ahora <= tiempo + timedelta(minutes=7):
-            pred = predecir_con_neuronal(historial)
-            if pred != "clear":
-                print("🟢 Pronóstico: próxima cuota probable mayor a 2.00 (por cuota alta detectada)")
-                del cuotas_altas[tiempo]
+# ============================================================
+# DECORADORES DE AUTENTICACIÓN
+# ============================================================
+from functools import wraps
 
-# ===============================
-# Decoradores de autenticación
-# ===============================
 def login_required(f):
-    from functools import wraps
     @wraps(f)
     def decorated(*args, **kwargs):
         if "user" not in session or "token" not in session:
@@ -189,7 +179,6 @@ def login_required(f):
     return decorated
 
 def admin_required(f):
-    from functools import wraps
     @wraps(f)
     def decorated(*args, **kwargs):
         if "user" not in session:
@@ -200,9 +189,9 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
-# ===============================
-# Login / Logout
-# ===============================
+# ============================================================
+# RUTAS LOGIN / LOGOUT
+# ============================================================
 @app.route("/login", methods=["GET", "POST"])
 def login():
     import secrets
@@ -214,17 +203,14 @@ def login():
             return render_template("login.html", error="Credenciales inválidas")
         if user.expires < datetime.utcnow().date():
             return render_template("login.html", error="⏳ El tiempo de uso ha expirado")
-
         if not user.is_admin and user.session_token:
             return render_template("login.html", error="⚠️ Este usuario ya tiene una sesión activa en otro dispositivo")
-
         token = secrets.token_hex(16)
         user.session_token = token
         db.session.commit()
-
         session["user"] = user.email
         session["token"] = token
-        session["user_id"] = user.id  # 🔵 nuevo: guardar ID
+        session["user_id"] = user.id
         return redirect(url_for("index"))
     return render_template("login.html")
 
@@ -238,9 +224,9 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
-# ===============================
-# Panel Admin
-# ===============================
+# ============================================================
+# PANEL ADMIN
+# ============================================================
 @app.route("/admin", methods=["GET", "POST"])
 @admin_required
 def admin_panel():
@@ -262,13 +248,11 @@ def admin_panel():
         db.session.add(nuevo)
         db.session.commit()
         return redirect(url_for("admin_panel"))
-
     usuarios = User.query.all()
     hoy = datetime.utcnow().date()
     for u in usuarios:
         u.activo = bool(u.session_token)
         u.dias_restantes = (u.expires - hoy).days
-
     return render_template("admin.html", users=usuarios, admin=session.get("user"))
 
 @app.route("/forzar_logout/<int:id>")
@@ -278,7 +262,7 @@ def forzar_logout(id):
     if user and not user.is_admin:
         user.session_token = None
         db.session.commit()
-        socketio.emit("force_logout", {"user_id": id})  # 🔵 enviar evento en vivo
+        socketio.emit("force_logout", {"user_id": id})
     return redirect(url_for("admin_panel"))
 
 @app.route("/eliminar_usuario/<int:id>")
@@ -300,9 +284,9 @@ def extender_usuario(id):
         db.session.commit()
     return redirect(url_for("admin_panel"))
 
-# ===============================
-# IA Routes
-# ===============================
+# ============================================================
+# RUTAS DE LA APP
+# ============================================================
 @app.route("/")
 @login_required
 def index():
@@ -322,41 +306,18 @@ def guardar():
     historial.append(valor)
     if len(historial) > 100:
         historial.pop(0)
-    if valor >= 8.00:
-        cuotas_altas[datetime.now()] = valor
     os.makedirs(os.path.dirname(DATA_PATH), exist_ok=True)
     pd.DataFrame(historial, columns=["cuota"]).to_csv(DATA_PATH, index=False)
     entrenar_en_hilo()
-    analizar_cuotas_altas()
     pred = predecir_con_neuronal(historial)
     return jsonify({"prediccion": pred if pred else "clear"})
 
-@app.route("/borrar_ultimo", methods=["POST"])
-@login_required
-def borrar_ultimo():
-    if historial:
-        historial.pop()
-        pd.DataFrame(historial, columns=["cuota"]).to_csv(DATA_PATH, index=False)
-        entrenar_en_hilo()
-    return jsonify({"status": "ok"})
-
-@app.route("/limpiar_todo", methods=["POST"])
-@login_required
-def limpiar_todo():
-    global historial
-    historial = []
-    pd.DataFrame(historial, columns=["cuota"]).to_csv(DATA_PATH, index=False)
-    return jsonify({"status": "ok"})
-
-@app.route('/ping')
-def ping():
-    return "pong", 200
-
-# ===============================
-# Main
-# ===============================
+# ============================================================
+# MAIN (para Render)
+# ============================================================
 if __name__ == "__main__":
+    import eventlet
     cargar_historial()
     cargar_modelo_y_scaler()
     entrenar_en_hilo()
-    socketio.run(app, host="0.0.0.0", port=5000)
+    socketio.run(app, host="0.0.0.0", port=10000)
