@@ -218,6 +218,92 @@ def analizar_patrones_intervalos(valores):
         print("🔁 Patrones de intervalo detectados:", repetidos)
 
 # ===============================
+# 🔔 Nuevo: Vigilante horario (minutos:segundos) + API para alertas
+# ===============================
+# Lista histórica completa (las horas que me proporcionaste). No se usan las horas como fecha,
+# solo se extraen minuto:segundo para comparación.
+HISTORIC_TIMES = [
+    "14:18:47","14:25:27","14:29:58","14:31:02","14:32:32","14:33:49","14:35:05","14:38:59",
+    "14:41:36","14:42:48","14:46:51","14:50:24","14:54:58","14:56:09","14:57:41","14:58:54",
+    "14:59:39","15:01:27","15:16:32","15:17:40","15:21:16","15:24:56","15:26:35","15:28:29",
+    "15:32:34","15:36:16","15:37:33","15:42:12","15:44:51","15:55:34","16:07:01","16:17:10",
+    "16:22:45","16:32:40","16:35:27","16:38:44","16:50:01","16:52:20","16:54:41","17:03:23",
+    "17:04:36","17:09:38","17:10:49","17:13:45","17:14:33","17:17:55","17:19:25","17:20:58",
+    "17:26:10","17:32:18","17:41:50","17:42:47","17:51:58","17:54:51","17:55:32"
+]
+
+# Extraemos los MM:SS únicos para comparar
+TARGET_MMSS = set([t[3:] for t in HISTORIC_TIMES])
+
+# Estado global de alerta (para el frontend)
+_alert_state_lock = threading.Lock()
+_alert_state = {
+    "active": False,
+    "time_full": "",     # hora completa que se mostrará (HH:MM:SS)
+    "mmss": "",          # mm:ss coincidente
+    "expires_at": None
+}
+# Guardamos última vez que se disparó cada mm:ss para evitar repetición en menos de 30s
+_last_trigger = {}
+
+def _set_alert(now_dt):
+    """Activa la alerta por 10 segundos con la hora completa now_dt."""
+    with _alert_state_lock:
+        _alert_state["active"] = True
+        _alert_state["time_full"] = now_dt.strftime("%H:%M:%S")
+        _alert_state["mmss"] = now_dt.strftime("%M:%S")
+        _alert_state["expires_at"] = now_dt + timedelta(seconds=10)
+
+def _clear_alert():
+    with _alert_state_lock:
+        _alert_state["active"] = False
+        _alert_state["time_full"] = ""
+        _alert_state["mmss"] = ""
+        _alert_state["expires_at"] = None
+
+def monitor_times_thread():
+    """Hilo de vigilancia que compara minutos:segundos y activa alertas (10s)."""
+    while True:
+        try:
+            now = datetime.now()
+            mmss = now.strftime("%M:%S")
+            # Si mm:ss está en la lista y no se disparó en los últimos 30s -> activar
+            if mmss in TARGET_MMSS:
+                last = _last_trigger.get(mmss)
+                if last is None or (now - last).total_seconds() > 30:
+                    _last_trigger[mmss] = now
+                    _set_alert(now)
+            # limpiar alerta si expiró
+            with _alert_state_lock:
+                if _alert_state["active"] and _alert_state["expires_at"] and datetime.now() >= _alert_state["expires_at"]:
+                    _clear_alert()
+        except Exception as e:
+            # no detengamos el hilo por un error puntual
+            print("⚠️ Error en monitor_times_thread:", e)
+        time.sleep(0.5)  # revisa dos veces por segundo
+
+# Endpoint que el frontend puede consultar (polling/fetch) para saber si hay alerta activa
+@app.route("/alert_current")
+def alert_current():
+    with _alert_state_lock:
+        active = _alert_state["active"]
+        time_full = _alert_state["time_full"]
+        mmss = _alert_state["mmss"]
+        expires = _alert_state["expires_at"]
+    remaining = 0
+    if active and expires:
+        remaining = max(0, int((expires - datetime.now()).total_seconds()))
+    return jsonify({
+        "active": active,
+        "time_full": time_full,
+        "mmss": mmss,
+        "remaining": remaining
+    })
+
+# Iniciar el hilo vigilante en background (se hará en main)
+_monitor_thread = None
+
+# ===============================
 # Decoradores de autenticación
 # ===============================
 def login_required(f):
@@ -403,5 +489,11 @@ if __name__ == "__main__":
     cargar_historial()
     cargar_modelo_y_scaler()
     entrenar_en_hilo()
+
+    # Iniciar hilo vigilante si no está corriendo
+    if _monitor_thread is None or not (_monitor_thread.is_alive()):
+        _monitor_thread = threading.Thread(target=monitor_times_thread, daemon=True)
+        _monitor_thread.start()
+
     from waitress import serve
     serve(app, host="0.0.0.0", port=5000)
