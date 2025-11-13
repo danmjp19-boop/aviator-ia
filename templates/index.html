@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html>    
 <html lang="es">
 <head>
 <meta charset="utf-8" />
@@ -13,7 +13,8 @@ h1{color:#00ffff;margin:6px 0;}
   font-size:1.2em;
   color:cyan;
   letter-spacing:1px;
-  transition:all .3s;
+  text-shadow:0 0 5px cyan, 0 0 10px #0ff;
+  transition:color .5s, text-shadow .5s;
 }
 #analisisInput{width:120px;padding:5px;border:1px solid cyan;background:#000;color:cyan;border-radius:8px;text-align:center;}
 #analizarBtn{padding:6px 10px;background:cyan;color:#000;border:none;border-radius:8px;font-weight:bold;cursor:pointer;}
@@ -23,7 +24,7 @@ h1{color:#00ffff;margin:6px 0;}
 .acciones button{flex:1;padding:10px;border-radius:10px;background:cyan;color:black;font-weight:bold;cursor:pointer;}
 .limpiar{background:#f00;color:white;margin-top:20px;width:100%;font-weight:bold;border:2px solid #faa;}
 #graficoWrap{width:100%;height:260px;background:#000;border:2px solid cyan;border-radius:10px;padding:8px;margin-top:12px;overflow:hidden;}
-#graficoWrap canvas{width:100%!important;height:100%!important;display:block;touch-action:none;-ms-touch-action:none;}
+#graficoWrap canvas{width:100%!important;height:100%!important;display:block;}
 #mensaje_ia{margin-top:15px;font-size:1.2em;color:lime;min-height:1.5em;}
 #historial{margin-top:15px;display:flex;overflow-x:auto;gap:6px;padding-bottom:10px;border-top:1px solid cyan;border-bottom:1px solid cyan;width:100%;}
 #historial span{background:#033;padding:5px 10px;border-radius:5px;color:white;white-space:nowrap;font-weight:bold;}
@@ -86,42 +87,36 @@ h1{color:#00ffff;margin:6px 0;}
   {% endfor %}
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <script>
-// === BLOQUE NUEVO ===
 document.addEventListener("DOMContentLoaded",()=>{
+
   const horaDiv=document.getElementById("hora");
-
-  const tiemposEspeciales=[
-    "18:47","25:27","29:58","31:02","32:32","33:49","35:05","38:59","41:36","42:48",
-    "46:51","50:24","54:58","56:09","57:41","58:54","59:39","01:27","16:32","17:40",
-    "21:16","24:56","26:35","28:29","32:34","36:16","37:33","42:12","44:51","55:34",
-    "07:01","17:10","22:45","32:40","35:27","38:44","50:01","52:20","54:41","03:23",
-    "04:36","09:38","10:49","13:45","14:33","17:55","19:25","20:58","26:10","32:18",
-    "41:50","42:47","51:58","54:51","55:32"
+  const horasBase=[
+    "14:18:47","14:25:27","14:29:58","14:31:02","14:32:32","14:33:49","14:35:05","14:38:59","14:41:36","14:42:48",
+    "14:46:51","14:50:24","14:54:58","14:56:09","14:57:41","14:58:54","14:59:39","15:01:27","15:16:32","15:17:40",
+    "15:21:16","15:24:56","15:26:35","15:28:29","15:32:34","15:36:16","15:37:33","15:42:12","15:44:51","15:55:34",
+    "16:07:01","16:17:10","16:22:45","16:32:40","16:35:27","16:38:44","16:50:01","16:52:20","16:54:41","17:03:23",
+    "17:04:36","17:09:38","17:10:49","17:13:45","17:14:33","17:17:55","17:19:25","17:20:58","17:26:10","17:32:18",
+    "17:41:50","17:42:47","17:51:58","17:54:51","17:55:32"
   ];
-
-  let enRosa=false;
-  let timeoutRosa=null;
 
   function actualizarHora(){
     const ahora=new Date();
-    const hh=String(ahora.getHours()).padStart(2,"0");
-    const mm=String(ahora.getMinutes()).padStart(2,"0");
-    const ss=String(ahora.getSeconds()).padStart(2,"0");
-    horaDiv.textContent=`🕒 ${hh}:${mm}:${ss}`;
+    const hora=ahora.toLocaleTimeString('es-ES',{hour12:false});
+    horaDiv.innerText="🕒 "+hora;
 
-    const tiempoActual=`${mm}:${ss}`;
+    const actualMMSS=hora.slice(3); // minutos:segundos
+    const coincide=horasBase.some(h=>h.slice(3)===actualMMSS);
 
-    if(tiemposEspeciales.includes(tiempoActual) && !enRosa){
-      enRosa=true;
+    if(coincide){
       horaDiv.style.color="#ff66cc";
-      horaDiv.style.textShadow="0 0 10px #ff99dd,0 0 20px #ff66cc";
-      clearTimeout(timeoutRosa);
-      timeoutRosa=setTimeout(()=>{
+      horaDiv.style.textShadow="0 0 10px #ff66cc,0 0 20px #ff99dd";
+      setTimeout(()=>{
         horaDiv.style.color="cyan";
-        horaDiv.style.textShadow="none";
-        enRosa=false;
-      },7000); // ⏱️ dura 7 segundos exactos
+        horaDiv.style.textShadow="0 0 5px cyan,0 0 10px #0ff";
+      },7000);
     }
   }
 
@@ -130,5 +125,28 @@ document.addEventListener("DOMContentLoaded",()=>{
 });
 </script>
 
+<!-- Script MT-2 sin cambios -->
+<script>
+(function(){
+  function initMT2(){
+    const btn=document.getElementById('mt2_btn');
+    const input=document.getElementById('mt2_semilla');
+    const span=document.getElementById('mt2_tiempo');
+    if(!btn||!input||!span)return;
+    const intervalos=[{h:0,m:0,s:42},{h:0,m:1,s:33},{h:0,m:2,s:18},{h:0,m:2,s:49},{h:0,m:3,s:30}];
+    let tiempos=[],idx=0,tHandle=null;
+    function parseHora(str){const p=str.split(':').map(Number);if(p.length!==3||p.some(isNaN))return null;const d=new Date();d.setHours(p[0],p[1],p[2],0);return d;}
+    function sumar(base,itv){const n=new Date(base.getTime());n.setSeconds(n.getSeconds()+(itv.h*3600+itv.m*60+itv.s));return n;}
+    function fmt(d){return d?d.toTimeString().split(' ')[0]:'--:--:--';}
+    function actualizar(titila){if(idx>=tiempos.length){span.textContent='✅';span.style.color='cyan';return;}span.textContent=fmt(tiempos[idx]);if(titila){span.style.background='red';span.style.color='#fff';}else{span.style.background='';span.style.color='lime';}}
+    function verificar(){const ahora=new Date();if(idx>=tiempos.length){clearInterval(tHandle);return;}const diff=(tiempos[idx]-ahora)/1000;const alertWindow=Math.abs(diff)<=10;actualizar(alertWindow);if(diff<=0){idx++;actualizar(false);}}
+    function iniciar(){const raw=input.value.trim();const base=parseHora(raw);if(!base){alert('Formato inválido: HH:MM:SS');return;}tiempos=[base];for(let i=0;i<intervalos.length;i++){tiempos.push(sumar(tiempos[i],intervalos[i]));}idx=1;if(tHandle){clearInterval(tHandle);}verificar();tHandle=setInterval(verificar,1000);}
+    btn.addEventListener('click',iniciar);
+    input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();iniciar();}});
+  }
+  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initMT2);}
+  else{initMT2();}
+})();
+</script>
 </body>
 </html>
