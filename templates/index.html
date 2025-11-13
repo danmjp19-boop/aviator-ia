@@ -5,12 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>✈️ Aviator Pronosticador IA</title>
 <style>
-/* tus estilos EXACTOS (no modifiqué visual) */
+/* tus estilos EXACTOS (solo se cambió el color y animación de #hora) */
 body{background:#000;color:cyan;font-family:Arial,sans-serif;text-align:center;margin:0;padding:20px;}
 h1{color:#00ffff;margin:6px 0;}
 .container{max-width:400px;margin:0 auto;background:#111;padding:20px;border-radius:15px;box-shadow:0 0 15px cyan;display:flex;flex-direction:column;align-items:center;}
 #hora-analisis{display:flex;justify-content:space-between;align-items:center;width:100%;margin-bottom:10px;}
-#hora{font-size:1.2em;color:#0ff;letter-spacing:1px;}
+#hora{
+  font-size:1.2em;
+  color:#ff66cc; /* rosado */
+  letter-spacing:1px;
+  text-shadow:0 0 5px #ff99dd, 0 0 10px #ff66cc;
+  animation: brilloRosa 2s ease-in-out infinite;
+}
 #analisisInput{width:120px;padding:5px;border:1px solid cyan;background:#000;color:cyan;border-radius:8px;text-align:center;}
 #analizarBtn{padding:6px 10px;background:cyan;color:#000;border:none;border-radius:8px;font-weight:bold;cursor:pointer;}
 #display{background:#000;color:#0ff;font-size:2em;padding:10px;border:2px solid cyan;border-radius:10px;min-height:40px;margin-bottom:15px;width:100%;}
@@ -19,7 +25,6 @@ h1{color:#00ffff;margin:6px 0;}
 .acciones button{flex:1;padding:10px;border-radius:10px;background:cyan;color:black;font-weight:bold;cursor:pointer;}
 .limpiar{background:#f00;color:white;margin-top:20px;width:100%;font-weight:bold;border:2px solid #faa;}
 #graficoWrap{width:100%;height:260px;background:#000;border:2px solid cyan;border-radius:10px;padding:8px;margin-top:12px;overflow:hidden;}
-/* importante para gestos en móvil */
 #graficoWrap canvas{width:100%!important;height:100%!important;display:block;touch-action:none;-ms-touch-action:none;}
 #mensaje_ia{margin-top:15px;font-size:1.2em;color:lime;min-height:1.5em;}
 #historial{margin-top:15px;display:flex;overflow-x:auto;gap:6px;padding-bottom:10px;border-top:1px solid cyan;border-bottom:1px solid cyan;width:100%;}
@@ -29,39 +34,10 @@ h1{color:#00ffff;margin:6px 0;}
 .user-bar a{color:#ff5555;text-decoration:none;font-weight:bold;margin-left:8px;}
 .user-bar a:hover{text-decoration:underline;}
 
-/* --- estilos del bloque añadido (no tocan el resto) --- */
-#alertaBox {
-  width: 100%;
-  margin: 8px 0 10px 0;
-  display: none; /* se mostrará cuando haya alerta */
-  justify-content: center;
-  align-items: center;
-  border-radius: 8px;
-  padding: 8px;
-  box-shadow: 0 0 6px cyan;
-  border: 1px solid rgba(0,255,255,0.3);
-  background: rgba(0,0,0,0.6);
-}
-.alerta-inner {
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:4px;
-}
-.corazon {
-  font-size:20px;
-  color: #ff99cc;
-  display:inline-block;
-  animation: latido 1s infinite;
-}
-@keyframes latido {
-  0%,100%{ transform: scale(1); }
-  50%{ transform: scale(1.25); }
-}
-.hora-peq {
-  font-size:0.85em;
-  color: #ff99cc;
-  font-weight:600;
+/* 🌸 Animación de brillo rosado */
+@keyframes brilloRosa {
+  0%,100% { text-shadow:0 0 5px #ff99dd, 0 0 10px #ff66cc; }
+  50% { text-shadow:0 0 15px #ff99dd, 0 0 25px #ff66cc; }
 }
 </style>
 </head>
@@ -92,15 +68,6 @@ h1{color:#00ffff;margin:6px 0;}
     <span id="mt2_tiempo" style="min-width:75px;color:lime;font-weight:bold;transition:all .3s;">--:--:--</span>
   </div>
   <!-- ----- fin MT-2 ----- -->
-
-  <!-- ======= BLOQUE NUEVO: corazón + hora (DEBE IR AQUÍ, debajo de MT-2) ======= -->
-  <div id="alertaBox" aria-live="polite">
-    <div class="alerta-inner">
-      <div class="corazon" role="img" aria-label="Alerta">❤</div>
-      <div id="horaAlerta" class="hora-peq">--:--:--</div>
-    </div>
-  </div>
-  <!-- ======= FIN BLOQUE NUEVO ======= -->
 
   <div class="teclado">
     {% for n in [1,2,3,4,5,6,7,8,9,'.',0,'Borrar'] %}
@@ -207,35 +174,22 @@ document.addEventListener("DOMContentLoaded",()=>{
             mode:'xy',
             modifierKey:null,
             threshold:5,
-            // 👇 agregado: validar escalas en pan
-            onPan:({chart})=>{
-              clampOrResetScales(chart);
-            }
+            onPan:({chart})=>{clampOrResetScales(chart);}
           },
           zoom:{
             wheel:{enabled:true,speed:0.12,threshold:1},
             pinch:{enabled:true,threshold:1},
             mode:'xy',
-            onZoom:({chart})=>{
-              clampOrResetScales(chart);
-            },
-            // 👇 agregado: límites para evitar zoom extremo
-            limits:{
-              x:{min:1,max:1000000,minRange:1},
-              y:{min:-999999,max:999999}
-            }
+            onZoom:({chart})=>{clampOrResetScales(chart);},
+            limits:{x:{min:1,max:1000000,minRange:1},y:{min:-999999,max:999999}}
           }
         }
       },
-      scales:{
-        x:{ticks:{color:'cyan'},grid:{color:'#222'}},
-        y:{ticks:{color:'cyan'},grid:{color:'#222'}}
-      }
+      scales:{x:{ticks:{color:'cyan'},grid:{color:'#222'}},y:{ticks:{color:'cyan'},grid:{color:'#222'}}}
     },
     plugins:[Chart.registry.getPlugin('zoom'),referencePlugin]
   });
 
-  // 👇 cambio: ahora el gesto se captura en el contenedor
   const hammerArea=new Hammer(document.getElementById('graficoWrap'));
   hammerArea.get('pinch').set({enable:true});
   hammerArea.on('pinchstart pinchmove pinchend',e=>e.preventDefault());
@@ -317,10 +271,7 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   document.getElementById('grafico').addEventListener('dblclick',()=>grafico.resetZoom());
 
-  const ro=new MutationObserver(()=>{
-    actualizarGrafico();
-    clampOrResetScales(grafico);
-  });
+  const ro=new MutationObserver(()=>{actualizarGrafico();clampOrResetScales(grafico);});
   ro.observe(historialDiv,{childList:true});
 
   actualizarGrafico();
@@ -384,62 +335,11 @@ document.addEventListener("DOMContentLoaded",()=>{
     btn.addEventListener('click',iniciar);
     input.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();iniciar();}});
   }
-  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initMT2);}else{initMT2();}
+  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initMT2);}
+  else{initMT2();}
 })();
 </script>
-
-<!-- ======= SCRIPT ADICIONAL: consulta /alert_current y muestra la casilla ======= -->
-<script>
-(function(){
-  const caja=document.getElementById('alertaBox');
-  const horaEl=document.getElementById('horaAlerta');
-  let hideTimer=null;
-
-  // Actualiza la hora pequeña cada segundo (si el server devuelve time_full lo usaremos cuando llegue)
-  function tickLocalTime(){
-    if(!horaEl) return;
-    // sólo actualizar si el servidor no ha enviado time_full recientemente
-    horaEl.textContent = new Date().toLocaleTimeString('es-ES',{hour12:false});
-  }
-  setInterval(tickLocalTime,1000);
-  tickLocalTime();
-
-  async function checkAlert(){
-    try{
-      const res = await fetch('/alert_current', {cache: 'no-store'});
-      if(!res.ok) return;
-      const d = await res.json();
-      // soporte para claves en español o inglés (activa/active)
-      const isActive = d.active === true || d.activa === true || d.active === 'true' || d.activa === 'true';
-      // si server devuelve una hora completa preferimos mostrarla
-      if(d.time_full) horaEl.textContent = d.time_full;
-      if(d.time_full === undefined && d.time_full === null && d.mmss) {
-        // mostrar MM:SS si that's all we have
-        horaEl.textContent = d.mmss;
-      }
-      if(isActive){
-        if(caja) caja.style.display = 'flex';
-        // si server devuelve remaining (en segundos), usarlo; si no, 10s por defecto
-        const rem = (typeof d.remaining === 'number' && d.remaining>0) ? d.remaining : 10;
-        if(hideTimer) clearTimeout(hideTimer);
-        hideTimer = setTimeout(()=>{ if(caja) caja.style.display='none'; }, rem*1000);
-      } else {
-        // no activa -> ocultar
-        if(caja) caja.style.display = 'none';
-      }
-    }catch(e){
-      // errores de red: no hacer nada visible
-      // console.log('err alert', e);
-    }
-  }
-
-  // preguntar cada 1s
-  setInterval(checkAlert,1000);
-  // y preguntar inmediatamente una vez
-  checkAlert();
-})();
-</script>
-<!-- ======= FIN ======= -->
+<!-- ----- fin MT-2 ----- -->
 
 </body>
 </html>
