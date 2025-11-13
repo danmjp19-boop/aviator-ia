@@ -1,7 +1,7 @@
-<!DOCTYPE html>    
+<!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8" />
+<meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>✈️ Aviator Pronosticador IA</title>
 <style>
@@ -14,7 +14,7 @@ h1{color:#00ffff;margin:6px 0;}
   color:cyan;
   letter-spacing:1px;
   text-shadow:0 0 5px cyan, 0 0 10px #0ff;
-  transition:color .5s, text-shadow .5s;
+  transition:all .3s;
 }
 #analisisInput{width:120px;padding:5px;border:1px solid cyan;background:#000;color:cyan;border-radius:8px;text-align:center;}
 #analizarBtn{padding:6px 10px;background:cyan;color:#000;border:none;border-radius:8px;font-weight:bold;cursor:pointer;}
@@ -53,12 +53,14 @@ h1{color:#00ffff;margin:6px 0;}
 
   <div id="display"></div>
 
+  <!-- ----- MT-2 ----- -->
   <div id="mt2" style="width:100%;margin-bottom:8px;display:flex;justify-content:center;align-items:center;gap:6px;background:#111;padding:4px;border:1px solid cyan;border-radius:8px;box-shadow:0 0 6px cyan;font-size:0.9em;">
     <span style="color:cyan;font-weight:bold;">MT-2</span>
     <input id="mt2_semilla" type="text" placeholder="04:33:58" style="width:80px;text-align:center;background:#000;border:1px solid cyan;color:cyan;border-radius:6px;padding:3px;">
     <button id="mt2_btn" style="background:cyan;color:#000;border:none;border-radius:6px;font-weight:bold;cursor:pointer;padding:3px 6px;">▶</button>
     <span id="mt2_tiempo" style="min-width:75px;color:lime;font-weight:bold;transition:all .3s;">--:--:--</span>
   </div>
+  <!-- ----- fin MT-2 ----- -->
 
   <div class="teclado">
     {% for n in [1,2,3,4,5,6,7,8,9,'.',0,'Borrar'] %}
@@ -92,7 +94,14 @@ h1{color:#00ffff;margin:6px 0;}
 <script>
 document.addEventListener("DOMContentLoaded",()=>{
 
+  const display=document.getElementById("display");
+  const historialDiv=document.getElementById("historial");
+  const mensajeIA=document.getElementById("mensaje_ia");
   const horaDiv=document.getElementById("hora");
+  const input=document.getElementById("analisisInput");
+  const btn=document.getElementById("analizarBtn");
+
+  // 🔹 Lista de horas donde debe parpadear rosa
   const horasBase=[
     "14:18:47","14:25:27","14:29:58","14:31:02","14:32:32","14:33:49","14:35:05","14:38:59","14:41:36","14:42:48",
     "14:46:51","14:50:24","14:54:58","14:56:09","14:57:41","14:58:54","14:59:39","15:01:27","15:16:32","15:17:40",
@@ -102,14 +111,66 @@ document.addEventListener("DOMContentLoaded",()=>{
     "17:41:50","17:42:47","17:51:58","17:54:51","17:55:32"
   ];
 
+  // ✅ Teclado funcional
+  window.tecla=t=>{
+    if(t==="Borrar") display.innerText=display.innerText.slice(0,-1);
+    else display.innerText+=t;
+  };
+
+  // ✅ Botón "Ingresar"
+  window.guardar=()=>{
+    const cuota=parseFloat(display.innerText.trim());
+    if(isNaN(cuota))return;
+    fetch("/guardar",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({cuota})})
+    .then(r=>r.json()).then(d=>{
+      display.innerText="";
+      mensajeIA.innerText=(d.prediccion&&d.prediccion!=="clear")?d.prediccion:"";
+      const span=document.createElement("span");
+      span.innerText=cuota.toFixed(2);
+      span.style.color="white";
+      historialDiv.appendChild(span);
+      historialDiv.scrollLeft=historialDiv.scrollWidth;
+    }).catch(()=>{});
+  };
+
+  // ✅ Botón "Deshacer"
+  window.deshacer=()=>{
+    fetch("/borrar_ultimo",{method:"POST"}).then(()=>{
+      if(historialDiv.lastChild)historialDiv.removeChild(historialDiv.lastChild);
+    });
+  };
+
+  // ✅ Botón "Limpiar Pantalla"
+  window.limpiarPantalla=()=>{
+    if(!confirm("⚠️ ¿Seguro que deseas borrar el historial y reiniciar la pantalla?"))return;
+    fetch("/limpiar_todo",{method:"POST"}).then(()=>{
+      historialDiv.innerHTML="";
+      mensajeIA.innerText="";
+      display.innerText="";
+      alert("✅ Pantalla e historial reiniciados.");
+    });
+  };
+
+  // ✅ Botón "Iniciar"
+  btn.onclick=()=>{
+    const texto=input.value.trim();
+    const match=texto.match(/([\d.]+)x\s*(\d{2}):(\d{2}):(\d{2})/);
+    if(!match)return;
+    const mult=parseFloat(match[1]);
+    const h=parseInt(match[2]),m=parseInt(match[3]),s=parseInt(match[4]);
+    const base=new Date();base.setHours(h,m,s,0);
+    const nuevo=new Date(base.getTime()+mult*60000);
+    input.value=`${match[1]}x ${nuevo.toTimeString().split(' ')[0]}`;
+  };
+
+  // ⏰ Actualizar hora + cambio de color rosa durante 7 s
   function actualizarHora(){
     const ahora=new Date();
     const hora=ahora.toLocaleTimeString('es-ES',{hour12:false});
     horaDiv.innerText="🕒 "+hora;
 
-    const actualMMSS=hora.slice(3); // minutos:segundos
+    const actualMMSS=hora.slice(3);
     const coincide=horasBase.some(h=>h.slice(3)===actualMMSS);
-
     if(coincide){
       horaDiv.style.color="#ff66cc";
       horaDiv.style.textShadow="0 0 10px #ff66cc,0 0 20px #ff99dd";
@@ -119,9 +180,7 @@ document.addEventListener("DOMContentLoaded",()=>{
       },7000);
     }
   }
-
-  setInterval(actualizarHora,1000);
-  actualizarHora();
+  setInterval(actualizarHora,1000);actualizarHora();
 });
 </script>
 
