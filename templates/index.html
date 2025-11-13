@@ -1,4 +1,4 @@
-<!DOCTYPE html>  
+<!DOCTYPE html>   
 <html lang="es">
 <head>
 <meta charset="utf-8" />
@@ -28,6 +28,41 @@ h1{color:#00ffff;margin:6px 0;}
 .user-bar span{color:#0ff;font-weight:bold;}
 .user-bar a{color:#ff5555;text-decoration:none;font-weight:bold;margin-left:8px;}
 .user-bar a:hover{text-decoration:underline;}
+
+/* --- estilos del bloque añadido (no tocan el resto) --- */
+#alertaBox {
+  width: 100%;
+  margin: 8px 0 10px 0;
+  display: none; /* se mostrará cuando haya alerta */
+  justify-content: center;
+  align-items: center;
+  border-radius: 8px;
+  padding: 8px;
+  box-shadow: 0 0 6px cyan;
+  border: 1px solid rgba(0,255,255,0.3);
+  background: rgba(0,0,0,0.6);
+}
+.alerta-inner {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+}
+.corazon {
+  font-size:20px;
+  color: #ff99cc;
+  display:inline-block;
+  animation: latido 1s infinite;
+}
+@keyframes latido {
+  0%,100%{ transform: scale(1); }
+  50%{ transform: scale(1.25); }
+}
+.hora-peq {
+  font-size:0.85em;
+  color: #ff99cc;
+  font-weight:600;
+}
 </style>
 </head>
 <body>
@@ -57,6 +92,15 @@ h1{color:#00ffff;margin:6px 0;}
     <span id="mt2_tiempo" style="min-width:75px;color:lime;font-weight:bold;transition:all .3s;">--:--:--</span>
   </div>
   <!-- ----- fin MT-2 ----- -->
+
+  <!-- ======= BLOQUE NUEVO: corazón + hora (DEBE IR AQUÍ, debajo de MT-2) ======= -->
+  <div id="alertaBox" aria-live="polite">
+    <div class="alerta-inner">
+      <div class="corazon" role="img" aria-label="Alerta">❤</div>
+      <div id="horaAlerta" class="hora-peq">--:--:--</div>
+    </div>
+  </div>
+  <!-- ======= FIN BLOQUE NUEVO ======= -->
 
   <div class="teclado">
     {% for n in [1,2,3,4,5,6,7,8,9,'.',0,'Borrar'] %}
@@ -343,6 +387,59 @@ document.addEventListener("DOMContentLoaded",()=>{
   if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initMT2);}else{initMT2();}
 })();
 </script>
+
+<!-- ======= SCRIPT ADICIONAL: consulta /alert_current y muestra la casilla ======= -->
+<script>
+(function(){
+  const caja=document.getElementById('alertaBox');
+  const horaEl=document.getElementById('horaAlerta');
+  let hideTimer=null;
+
+  // Actualiza la hora pequeña cada segundo (si el server devuelve time_full lo usaremos cuando llegue)
+  function tickLocalTime(){
+    if(!horaEl) return;
+    // sólo actualizar si el servidor no ha enviado time_full recientemente
+    horaEl.textContent = new Date().toLocaleTimeString('es-ES',{hour12:false});
+  }
+  setInterval(tickLocalTime,1000);
+  tickLocalTime();
+
+  async function checkAlert(){
+    try{
+      const res = await fetch('/alert_current', {cache: 'no-store'});
+      if(!res.ok) return;
+      const d = await res.json();
+      // soporte para claves en español o inglés (activa/active)
+      const isActive = d.active === true || d.activa === true || d.active === 'true' || d.activa === 'true';
+      // si server devuelve una hora completa preferimos mostrarla
+      if(d.time_full) horaEl.textContent = d.time_full;
+      if(d.time_full === undefined && d.time_full === null && d.mmss) {
+        // mostrar MM:SS si that's all we have
+        horaEl.textContent = d.mmss;
+      }
+      if(isActive){
+        if(caja) caja.style.display = 'flex';
+        // si server devuelve remaining (en segundos), usarlo; si no, 10s por defecto
+        const rem = (typeof d.remaining === 'number' && d.remaining>0) ? d.remaining : 10;
+        if(hideTimer) clearTimeout(hideTimer);
+        hideTimer = setTimeout(()=>{ if(caja) caja.style.display='none'; }, rem*1000);
+      } else {
+        // no activa -> ocultar
+        if(caja) caja.style.display = 'none';
+      }
+    }catch(e){
+      // errores de red: no hacer nada visible
+      // console.log('err alert', e);
+    }
+  }
+
+  // preguntar cada 1s
+  setInterval(checkAlert,1000);
+  // y preguntar inmediatamente una vez
+  checkAlert();
+})();
+</script>
+<!-- ======= FIN ======= -->
 
 </body>
 </html>
