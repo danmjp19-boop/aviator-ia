@@ -1,94 +1,3 @@
-<!DOCTYPE html>    
-<html lang="es">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>✈️ Aviator Pronosticador IA</title>
-<style>
-/* tus estilos EXACTOS (no modifiqué visual) */
-body{background:#000;color:cyan;font-family:Arial,sans-serif;text-align:center;margin:0;padding:20px;}
-h1{color:#00ffff;margin:6px 0;}
-.container{max-width:400px;margin:0 auto;background:#111;padding:20px;border-radius:15px;box-shadow:0 0 15px cyan;display:flex;flex-direction:column;align-items:center;}
-#hora-analisis{display:flex;justify-content:space-between;align-items:center;width:100%;margin-bottom:10px;}
-#hora{font-size:1.2em;color:#0ff;letter-spacing:1px; transition:color .25s, text-shadow .25s;}
-#analisisInput{width:120px;padding:5px;border:1px solid cyan;background:#000;color:cyan;border-radius:8px;text-align:center;}
-#analizarBtn{padding:6px 10px;background:cyan;color:#000;border:none;border-radius:8px;font-weight:bold;cursor:pointer;}
-#display{background:#000;color:#0ff;font-size:2em;padding:10px;border:2px solid cyan;border-radius:10px;min-height:40px;margin-bottom:15px;width:100%;}
-.teclado button{width:30%;margin:5px;padding:10px;font-size:1.2em;border-radius:10px;background:#022;color:cyan;border:1px solid #0ff;cursor:pointer;}
-.acciones{margin-top:10px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;width:100%;}
-.acciones button{flex:1;padding:10px;border-radius:10px;background:cyan;color:black;font-weight:bold;cursor:pointer;}
-.limpiar{background:#f00;color:white;margin-top:20px;width:100%;font-weight:bold;border:2px solid #faa;}
-#graficoWrap{width:100%;height:260px;background:#000;border:2px solid cyan;border-radius:10px;padding:8px;margin-top:12px;overflow:hidden;}
-#graficoWrap canvas{width:100%!important;height:100%!important;display:block;touch-action:none;-ms-touch-action:none;}
-#mensaje_ia{margin-top:15px;font-size:1.2em;color:lime;min-height:1.5em;}
-#historial{margin-top:15px;display:flex;overflow-x:auto;gap:6px;padding-bottom:10px;border-top:1px solid cyan;border-bottom:1px solid cyan;width:100%;}
-#historial span{background:#033;padding:5px 10px;border-radius:5px;color:white;white-space:nowrap;font-weight:bold;}
-.user-bar{margin-bottom:10px;text-align:center;font-size:0.95em;}
-.user-bar span{color:#0ff;font-weight:bold;}
-.user-bar a{color:#ff5555;text-decoration:none;font-weight:bold;margin-left:8px;}
-.user-bar a:hover{text-decoration:underline;}
-/* efecto rosado */
-.hora-rosa{ color: #ff66cc !important; text-shadow:0 0 10px #ff99dd, 0 0 20px #ff66cc !important; }
-</style>
-</head>
-<body>
-<h1>✈️ Aviator Pronosticador IA</h1>
-
-<div class="user-bar">
-  <span>📧 {{ usuario }}</span> |
-  <a href="/logout">Cerrar sesión</a>
-</div>
-
-<div class="container">
-  <div id="hora-analisis">
-    <div id="hora"></div>
-    <div>
-      <input type="text" id="analisisInput" placeholder="1.84x 03:52:27">
-      <button id="analizarBtn">Iniciar</button>
-    </div>
-  </div>
-
-  <div id="display"></div>
-
-  <!-- ----- MT-2 ----- -->
-  <div id="mt2" style="width:100%;margin-bottom:8px;display:flex;justify-content:center;align-items:center;gap:6px;background:#111;padding:4px;border:1px solid cyan;border-radius:8px;box-shadow:0 0 6px cyan;font-size:0.9em;">
-    <span style="color:cyan;font-weight:bold;">MT-2</span>
-    <input id="mt2_semilla" type="text" placeholder="04:33:58" style="width:80px;text-align:center;background:#000;border:1px solid cyan;color:cyan;border-radius:6px;padding:3px;">
-    <button id="mt2_btn" style="background:cyan;color:#000;border:none;border-radius:6px;font-weight:bold;cursor:pointer;padding:3px 6px;">▶</button>
-    <span id="mt2_tiempo" style="min-width:75px;color:lime;font-weight:bold;transition:all .3s;">--:--:--</span>
-  </div>
-
-  <div class="teclado">
-    {% for n in [1,2,3,4,5,6,7,8,9,'.',0,'Borrar'] %}
-      <button onclick="tecla('{{n}}')">{{n}}</button>
-    {% endfor %}
-  </div>
-
-  <div class="acciones">
-    <button onclick="guardar()">Ingresar</button>
-    <button onclick="deshacer()">↩️ Deshacer</button>
-  </div>
-
-  <button class="limpiar" onclick="limpiarPantalla()">🧹 Limpiar Pantalla</button>
-
-  <div id="mensaje_ia"></div>
-
-  <div id="graficoWrap">
-    <canvas id="grafico"></canvas>
-  </div>
-</div>
-
-<h2>Historial</h2>
-<div id="historial">
-  {% for h in historial %}
-    <span>{{'%.2f'|format(h)}}</span>
-  {% endfor %}
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1/dist/chartjs-plugin-zoom.min.js"></script>
-
 <script>
 document.addEventListener("DOMContentLoaded",()=>{
 
@@ -158,10 +67,14 @@ document.addEventListener("DOMContentLoaded",()=>{
       plugins:{
         legend:{display:false},
         zoom:{
-          pan:{enabled:true,mode:'xy',threshold:5,onPan:({chart})=>clampOrResetScales(chart)},
-          zoom:{wheel:{enabled:true,speed:0.12,threshold:1},pinch:{enabled:true,threshold:1},mode:'xy',
+          pan:{enabled:true,mode:'xy',modifierKey:null,threshold:5,onPan:({chart})=>clampOrResetScales(chart)},
+          zoom:{
+            wheel:{enabled:true,speed:0.12,threshold:1},
+            pinch:{enabled:true,threshold:1},
+            mode:'xy',
             onZoom:({chart})=>clampOrResetScales(chart),
-            limits:{x:{min:1,max:1000000,minRange:1},y:{min:-999999,max:999999}}}
+            limits:{x:{min:1,max:1000000,minRange:1},y:{min:-999999,max:999999}}
+          }
         }
       },
       scales:{x:{ticks:{color:'cyan'},grid:{color:'#222'}},y:{ticks:{color:'cyan'},grid:{color:'#222'}}}
@@ -175,7 +88,9 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   function actualizarGrafico(){
     const cuotas=Array.from(historialDiv.children).map(s=>parseFloat(s.innerText));
-    if(cuotas.length===0){grafico.data.labels=[];grafico.data.datasets[0].data=[];grafico.update();return;}
+    if(cuotas.length===0){
+      grafico.data.labels=[];grafico.data.datasets[0].data=[];grafico.update();return;
+    }
     let valor=0;
     const serie=cuotas.map(c=>{valor+=(c<2?-1:1);return valor;});
     grafico.data.labels=serie.map((_,i)=>i+1);
@@ -188,18 +103,64 @@ document.addEventListener("DOMContentLoaded",()=>{
     grafico.update('none');
   }
 
-  // === FUNCIONALIDAD ORIGINAL ===
   window.tecla=t=>{if(t==="Borrar")display.innerText=display.innerText.slice(0,-1);else display.innerText+=t;};
 
-  window.guardar=()=>{ /* igual */ };
-  window.deshacer=()=>{ /* igual */ };
-  window.limpiarPantalla=()=>{ /* igual */ };
+  window.guardar=()=>{
+    const cuota=parseFloat(display.innerText.trim());
+    if(isNaN(cuota))return;
+    fetch("/guardar",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({cuota})})
+    .then(r=>r.json()).then(d=>{
+      display.innerText="";
+      mensajeIA.innerText=(d.prediccion&&d.prediccion!=="clear")?d.prediccion:"";
+      const span=document.createElement("span");
+      span.innerText=cuota.toFixed(2);
+      span.style.color="white";
+      historialDiv.appendChild(span);
+      historialDiv.scrollLeft=historialDiv.scrollWidth;
+      actualizarGrafico();
+    }).catch(()=>{
+      const span=document.createElement("span");
+      span.innerText=cuota.toFixed(2);
+      span.style.color="white";
+      historialDiv.appendChild(span);
+      historialDiv.scrollLeft=historialDiv.scrollWidth;
+      actualizarGrafico();
+    });
+  };
 
-  btn.onclick=()=>{ /* igual */ };
+  window.deshacer=()=>{
+    fetch("/borrar_ultimo",{method:"POST"}).then(()=>{
+      if(historialDiv.lastChild)historialDiv.removeChild(historialDiv.lastChild);
+      mensajeIA.innerText="";actualizarGrafico();
+    }).catch(()=>{if(historialDiv.lastChild)historialDiv.removeChild(historialDiv.lastChild);actualizarGrafico();});
+  };
 
-  // =========================
-  // 💗 Ajuste de hora rosada 10s antes y 7s después
-  // =========================
+  window.limpiarPantalla=()=>{
+    if(!confirm("⚠️ ¿Seguro que deseas borrar el historial y reiniciar la pantalla?"))return;
+    fetch("/limpiar_todo",{method:"POST"}).then(()=>{
+      historialDiv.innerHTML="";mensajeIA.innerText="";display.innerText="";
+      grafico.data.labels=[];grafico.data.datasets[0].data=[];grafico.update();
+      alert("✅ Pantalla e historial reiniciados.");
+    }).catch(()=>{historialDiv.innerHTML="";grafico.data.labels=[];grafico.data.datasets[0].data=[];grafico.update();});
+  };
+
+  btn.onclick=()=>{
+    const texto=input.value.trim();
+    const match=texto.match(/([\d.]+)x\s*(\d{2}):(\d{2}):(\d{2})/);
+    if(!match)return;
+    const mult=parseFloat(match[1]);
+    const h=parseInt(match[2]),m=parseInt(match[3]),s=parseInt(match[4]);
+    const base=new Date();base.setHours(h,m,s,0);
+    const nuevo=new Date(base.getTime()+mult*60000);
+    const nh=String(nuevo.getHours()).padStart(2,"0");
+    const nm=String(nuevo.getMinutes()).padStart(2,"0");
+    const ns=String(nuevo.getSeconds()).padStart(2,"0");
+    input.value=`${match[1]}x ${nh}:${nm}:${ns}`;
+  };
+
+  // ================================
+  // 🔔 AJUSTE: hora rosa 10s antes del tiempo objetivo (7s de duración)
+  // ================================
   const horasBase=[
     "14:18:47","14:25:27","14:29:58","14:31:02","14:32:32","14:33:49","14:35:05","14:38:59","14:41:36","14:42:48",
     "14:46:51","14:50:24","14:54:58","14:56:09","14:57:41","14:58:54","14:59:39","15:01:27","15:16:32","15:17:40",
@@ -209,35 +170,45 @@ document.addEventListener("DOMContentLoaded",()=>{
     "17:41:50","17:42:47","17:51:58","17:54:51","17:55:32"
   ];
 
-  const segundosBase = horasBase.map(h=>{
+  // convertir a segundos del día
+  const segundosReferencia = horasBase.map(h=>{
     const [hh,mm,ss]=h.split(':').map(Number);
     return hh*3600+mm*60+ss;
   });
+
+  let highlightTimeout=null;
+  let isHighlighted=false;
 
   function actualizarHora(){
     const ahora=new Date();
     const horaStr=ahora.toLocaleTimeString('es-ES',{hour12:false});
     horaDiv.innerText="🕒 "+horaStr;
 
-    const segundosActual=ahora.getHours()*3600+ahora.getMinutes()*60+ahora.getSeconds();
-    const enRango=segundosBase.some(t=>(t-segundosActual>=-7)&&(t-segundosActual<=10));
+    const segundosAhora = ahora.getHours()*3600 + ahora.getMinutes()*60 + ahora.getSeconds();
 
-    if(enRango) horaDiv.classList.add('hora-rosa');
-    else horaDiv.classList.remove('hora-rosa');
+    for(const seg of segundosReferencia){
+      if(segundosAhora >= seg-10 && segundosAhora < seg-3 && !isHighlighted){ 
+        isHighlighted=true;
+        horaDiv.classList.add('hora-rosa');
+        clearTimeout(highlightTimeout);
+        highlightTimeout=setTimeout(()=>{
+          horaDiv.classList.remove('hora-rosa');
+          isHighlighted=false;
+          highlightTimeout=null;
+        },7000);
+        break;
+      }
+    }
   }
 
   setInterval(actualizarHora,1000);
   actualizarHora();
 
+  document.getElementById('grafico').addEventListener('dblclick',()=>grafico.resetZoom());
+
+  const ro=new MutationObserver(()=>{actualizarGrafico();clampOrResetScales(grafico);});
+  ro.observe(historialDiv,{childList:true});
+
+  actualizarGrafico();
 });
 </script>
-
-<!-- ----- Script MT-2 (sin cambios) ----- -->
-<script>
-(function(){
-  // igual que tu código MT-2 original
-})();
-</script>
-
-</body>
-</html>
