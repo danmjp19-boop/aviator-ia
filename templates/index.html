@@ -1,4 +1,4 @@
-<!DOCTYPE html>  
+<!DOCTYPE html>   
 <html lang="es">
 <head>
 <meta charset="utf-8" />
@@ -19,7 +19,6 @@ h1{color:#00ffff;margin:6px 0;}
 .acciones button{flex:1;padding:10px;border-radius:10px;background:cyan;color:black;font-weight:bold;cursor:pointer;}
 .limpiar{background:#f00;color:white;margin-top:20px;width:100%;font-weight:bold;border:2px solid #faa;}
 #graficoWrap{width:100%;height:260px;background:#000;border:2px solid cyan;border-radius:10px;padding:8px;margin-top:12px;overflow:hidden;}
-/* importante para gestos en móvil */
 #graficoWrap canvas{width:100%!important;height:100%!important;display:block;touch-action:none;-ms-touch-action:none;}
 #mensaje_ia{margin-top:15px;font-size:1.2em;color:lime;min-height:1.5em;}
 #historial{margin-top:15px;display:flex;overflow-x:auto;gap:6px;padding-bottom:10px;border-top:1px solid cyan;border-bottom:1px solid cyan;width:100%;}
@@ -29,37 +28,35 @@ h1{color:#00ffff;margin:6px 0;}
 .user-bar a{color:#ff5555;text-decoration:none;font-weight:bold;margin-left:8px;}
 .user-bar a:hover{text-decoration:underline;}
 
-/* ❤️ Bloque de alerta y hora (nuevo) */
-#alerta-corazon {
-  position: fixed;
-  bottom: 10px;
-  right: 12px;
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  z-index: 9999;
-  animation: aparecer 0.3s ease;
+/* 🩷 bloque de alerta abajo derecha */
+#alerta-bloque{
+  position:fixed;
+  bottom:10px;
+  right:10px;
+  background:#111;
+  border:1px solid cyan;
+  border-radius:10px;
+  box-shadow:0 0 10px cyan;
+  padding:10px;
+  display:none;
+  text-align:center;
+  z-index:9999;
 }
-@keyframes aparecer {
-  from { opacity: 0; transform: scale(0.8); }
-  to { opacity: 1; transform: scale(1); }
+.corazon{
+  color:pink;
+  font-size:22px;
+  animation:latido 1s infinite;
 }
-#corazon {
-  font-size: 22px;
-  color: #ff66aa;
-  animation: latido 1s infinite;
+@keyframes latido{
+  0%,100%{transform:scale(1);}
+  25%{transform:scale(1.3);}
+  50%{transform:scale(0.9);}
+  75%{transform:scale(1.2);}
 }
-@keyframes latido {
-  0%, 100% { transform: scale(1); }
-  25% { transform: scale(1.3); }
-  50% { transform: scale(0.9); }
-  75% { transform: scale(1.2); }
-}
-#hora-mini {
-  color: #ff99cc;
-  font-size: 0.75em;
-  margin-top: 2px;
-  font-weight: bold;
+.hora-peq{
+  font-size:0.8em;
+  color:pink;
+  margin-top:4px;
 }
 </style>
 </head>
@@ -118,46 +115,51 @@ h1{color:#00ffff;margin:6px 0;}
   {% endfor %}
 </div>
 
+<!-- 💗 Bloque de alerta (añadido) -->
+<div id="alerta-bloque">
+  <div class="corazon">❤</div>
+  <div class="hora-peq" id="hora-alerta"></div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1/dist/chartjs-plugin-zoom.min.js"></script>
 
-<!-- (Tu JS existente sin cambios) -->
+<!-- tu JS original (sin modificar) -->
 <script>
-/* ...todo tu script original sin tocar... */
+/* … TODO TU JS ORIGINAL COMPLETO SIN CAMBIOS … */
 </script>
 
-<!-- ----- Script MT-2 (sin cambios) ----- -->
+<!-- 💗 Script nuevo para reloj pequeño y alerta -->
 <script>
-/* ...tu bloque MT-2 sin tocar... */
-</script>
+document.addEventListener("DOMContentLoaded",()=>{
+  const alerta=document.getElementById("alerta-bloque");
+  const horaA=document.getElementById("hora-alerta");
 
-<!-- ❤️ Bloque de alerta con corazón y hora pequeña -->
-<div id="alerta-corazon">
-  <div id="corazon">❤️</div>
-  <div id="hora-mini"></div>
-</div>
-<script>
-(function(){
-  const alerta=document.getElementById('alerta-corazon');
-  const horaMini=document.getElementById('hora-mini');
-  function actualizarHoraMini(){
-    const ahora=new Date();
-    horaMini.textContent=ahora.toLocaleTimeString('es-ES',{hour12:false});
+  function actualizarHora(){
+    horaA.textContent=new Date().toLocaleTimeString('es-ES',{hour12:false});
   }
-  setInterval(actualizarHoraMini,1000);
-  actualizarHoraMini();
-  async function verificarAlerta(){
+  setInterval(actualizarHora,1000);
+  actualizarHora();
+
+  async function revisarAlerta(){
     try{
       const r=await fetch('/alert_current');
-      if(!r.ok)return;
       const d=await r.json();
-      if(d.activa){alerta.style.display='flex';}
-      else{alerta.style.display='none';}
-    }catch(e){alerta.style.display='none';}
+      if(d.activa){
+        alerta.style.display='block';
+        setTimeout(()=>{alerta.style.display='none';},10000);
+      }
+    }catch(e){/* sin errores visibles */}
   }
-  setInterval(verificarAlerta,1000);
-  verificarAlerta();
+  setInterval(revisarAlerta,1000);
+});
+</script>
+
+<!-- Script MT-2 (sin cambios) -->
+<script>
+(function(){
+  /* … todo tu bloque MT-2 original intacto … */
 })();
 </script>
 
