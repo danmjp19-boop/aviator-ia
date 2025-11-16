@@ -284,6 +284,18 @@ def alert_current():
 _monitor_thread = None
 
 # ===============================
+# 🔐 NUEVA RUTA — VERIFICAR SESIÓN
+# ===============================
+@app.route("/check_session")
+def check_session():
+    if "user" not in session or "token" not in session:
+        return jsonify({"valid": False})
+    user = User.query.filter_by(email=session["user"]).first()
+    if not user or user.session_token != session["token"]:
+        return jsonify({"valid": False})
+    return jsonify({"valid": True})
+
+# ===============================
 # Decoradores de autenticación
 # ===============================
 from functools import wraps
@@ -336,9 +348,9 @@ def login():
         if user.expires < datetime.utcnow().date():
             return render_template("login.html", error="⏳ El tiempo de uso ha expirado")
 
-        if not user.is_admin and user.session_token:
-            user.session_token = None
-            db.session.commit()
+        # Limpiar cualquier sesión previa
+        user.session_token = None
+        db.session.commit()
 
         token = secrets.token_hex(16)
         user.session_token = token
