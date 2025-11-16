@@ -331,7 +331,7 @@ def admin_required(f):
 # ===============================
 @app.route("/")
 def index():
-    return redirect(url_for("panel"))
+    return redirect(url_for("login"))
 
 # ===============================
 # Login / Logout
