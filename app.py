@@ -330,8 +330,8 @@ def admin_required(f):
 # Redirección raíz
 # ===============================
 @app.route("/")
-def root_redirect():
-    return redirect("/login")
+def index():
+    return redirect(url_for("panel"))
 
 # ===============================
 # Login / Logout
