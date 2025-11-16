@@ -344,7 +344,7 @@ def login():
         password = request.form.get("password", "").strip()
         user = User.query.filter_by(email=email).first()
         if not user or not check_password_hash(user.password, password):
-            return render_template("login.html", error="Usuario no existe")
+            return render_template("login.html", error="Usuario no existe o tiene 0 dias")
         if user.expires < datetime.utcnow().date():
             return render_template("login.html", error="⏳ El tiempo de uso ha expirado")
 
