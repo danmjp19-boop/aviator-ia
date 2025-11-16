@@ -366,7 +366,7 @@ def logout():
 @app.route("/admin", methods=["GET", "POST"])
 @admin_required
 def admin_panel():
-    if request.method == "POST"]:
+    if request.method == "POST":
         email = request.form.get("email")
         password = request.form.get("password")
         dias = int(request.form.get("dias", 1))
