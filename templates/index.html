@@ -368,5 +368,21 @@ document.addEventListener("DOMContentLoaded",()=>{
 })();
 </script>
 
+<!-- 🔥 CIERRE AUTOMÁTICO DE SESIÓN SIN REFRESCAR (PARTE 1) -->
+<script>
+setInterval(() => {
+    fetch("/check_session")
+        .then(r => r.json())
+        .then(data => {
+            if (!data.valid) {
+                window.location.href = "/login";
+            }
+        })
+        .catch(() => {
+            window.location.href = "/login";
+        });
+}, 3000);
+</script>
+
 </body>
 </html>
