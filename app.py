@@ -13,9 +13,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 import time
+from functools import wraps
+import secrets
 
 app = Flask(__name__)
-app.secret_key = "cambia_esta_clave_secreta_por_una_muy_larga"
+app.secret_key = os.getenv("SECRET_KEY", "cambia_esta_clave_secreta_por_una_muy_larga")
 
 # ===============================
 # Configuración base de datos PostgreSQL
@@ -82,16 +84,19 @@ def construir_modelo(input_dim):
 def cargar_modelo_y_scaler():
     global model, scaler
     try:
+        scaler_local = None
         if os.path.exists(SCALER_PATH):
             scaler_local = joblib.load(SCALER_PATH)
-            scaler = scaler_local
         if os.path.exists(MODEL_PATH):
             model_local = load_model(MODEL_PATH)
-            if model_local.input_shape[1] != WINDOW:
+            if hasattr(model_local, "input_shape") and model_local.input_shape[1] != WINDOW:
                 model_local = construir_modelo(WINDOW)
                 scaler_local = MinMaxScaler()
             model = model_local
-            scaler = scaler_local
+            if scaler_local is None:
+                scaler = MinMaxScaler()
+            else:
+                scaler = scaler_local
         else:
             model = construir_modelo(WINDOW)
             scaler = MinMaxScaler()
@@ -125,7 +130,7 @@ def entrenar_neuronal():
         y = np.array(y, dtype=float)
         scaler_local = MinMaxScaler()
         X_scaled = scaler_local.fit_transform(X)
-        if model is None or model.input_shape[1] != X_scaled.shape[1]:
+        if model is None or (hasattr(model, "input_shape") and model.input_shape[1] != X_scaled.shape[1]):
             model_local = construir_modelo(X_scaled.shape[1])
         else:
             model_local = model
@@ -293,6 +298,9 @@ def check_session():
     user = User.query.filter_by(email=session["user"]).first()
     if not user or user.session_token != session["token"]:
         return jsonify({"valid": False})
+    # además comprobar expiración
+    if user.expires and user.expires < datetime.utcnow().date():
+        return jsonify({"valid": False})
     return jsonify({"valid": True})
 
 # ===============================
@@ -307,8 +315,10 @@ def session_stream():
     """
     def gen():
         try:
+            # guardamos el token y usuario que vienen en la cookie del request
+            # Flask's session is cookie-based; reading session here uses the request context.
             while True:
-                # si no hay sesión, indicar logout y terminar
+                # si no hay sesión en el cliente -> forzar logout
                 if "user" not in session or "token" not in session:
                     yield "data: logout\n\n"
                     break
@@ -318,6 +328,10 @@ def session_stream():
                     break
                 # si token del usuario cambió en servidor -> notificar logout
                 if user.session_token != session.get("token"):
+                    yield "data: logout\n\n"
+                    break
+                # si expiró -> notificar logout
+                if user.expires and user.expires < datetime.utcnow().date():
                     yield "data: logout\n\n"
                     break
                 # mantener conexión viva cada 2s
@@ -332,15 +346,13 @@ def session_stream():
 # ===============================
 # Decoradores de autenticación
 # ===============================
-from functools import wraps
-
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if "user" not in session or "token" not in session:
             return jsonify({"error": "unauthorized"}), 401
         user = User.query.filter_by(email=session["user"]).first()
-        if not user or user.expires < datetime.utcnow().date():
+        if not user or (user.expires and user.expires < datetime.utcnow().date()):
             session.clear()
             return jsonify({"error": "expired"}), 401
         if user.session_token != session["token"]:
@@ -352,10 +364,13 @@ def login_required(f):
 def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if "user" not in session:
+        if "user" not in session or "token" not in session:
             return redirect(url_for("login"))
         user = User.query.filter_by(email=session["user"]).first()
-        if not user or not user.is_admin:
+        if not user or user.session_token != session["token"]:
+            session.clear()
+            return redirect(url_for("login"))
+        if not user.is_admin:
             return redirect(url_for("panel"))
         return f(*args, **kwargs)
     return decorated
@@ -372,17 +387,17 @@ def root_redirect():
 # ===============================
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    import secrets
     if request.method == "POST":
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "").strip()
         user = User.query.filter_by(email=email).first()
         if not user or not check_password_hash(user.password, password):
             return render_template("login.html", error="Credenciales inválidas")
-        if user.expires < datetime.utcnow().date():
+        if user.expires and user.expires < datetime.utcnow().date():
             return render_template("login.html", error="⏳ El tiempo de uso ha expirado")
 
-        # Limpiar cualquier sesión previa (forzar cierre anterior)
+        # Forzar cierre de sesiones previas: dejar token previo nulo y luego asignar uno nuevo.
+        # Esto provoca que otros clientes conectados detecten el cambio y se cierren.
         user.session_token = None
         db.session.commit()
 
