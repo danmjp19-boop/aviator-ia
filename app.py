@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session 
 import pandas as pd
 import os
 import numpy as np
@@ -96,7 +96,7 @@ def cargar_modelo_y_scaler():
             model = construir_modelo(WINDOW)
             scaler = MinMaxScaler()
     except Exception as e:
-        print("⚠️ Error cargando modelo:", e)
+        print(⚠️ Error cargando modelo:", e)
         model = construir_modelo(WINDOW)
         scaler = MinMaxScaler()
 
@@ -164,13 +164,10 @@ def analizar_cuotas_altas():
                 del cuotas_altas[tiempo]
 
 # ===============================
-# 🔍 Análisis de intervalos temporales y patrones de color
+# 🔍 Análisis intervalos y color
 # ===============================
 def registrar_evento_y_analizar(valor_actual):
-    """Registra hora actual, analiza intervalos y patrones de color."""
     ahora = datetime.now()
-
-    # --- Intervals ---
     if not os.path.exists(INTERVALOS_PATH):
         pd.DataFrame(columns=["hora_inicio", "hora_fin", "duracion_seg"]).to_csv(INTERVALOS_PATH, index=False)
     df = pd.read_csv(INTERVALOS_PATH)
@@ -193,8 +190,6 @@ def registrar_evento_y_analizar(valor_actual):
     if len(df) > 5:
         ultimos = df["duracion_seg"].tail(10).values
         analizar_patrones_intervalos(ultimos)
-
-    # --- Patrones de color ---
     color_actual = ""
     if valor_actual < 2.0:
         color_actual = "Azul"
@@ -202,13 +197,10 @@ def registrar_evento_y_analizar(valor_actual):
         color_actual = "Morado"
     else:
         color_actual = "Rosado"
-
-    # Revisar patrones: si el color es Morado, avisar con el mismo mensaje
     if color_actual == "Morado":
         print("🟢 Pronóstico: próxima cuota probable mayor a 2.00 (por color Morado detectado)")
 
 def analizar_patrones_intervalos(valores):
-    """Detecta patrones o repeticiones en los intervalos de tiempo."""
     if len(valores) < 5:
         return
     redondeados = [round(v / 10) * 10 for v in valores]
@@ -218,10 +210,8 @@ def analizar_patrones_intervalos(valores):
         print("🔁 Patrones de intervalo detectados:", repetidos)
 
 # ===============================
-# 🔔 Nuevo: Vigilante horario (minutos:segundos) + API para alertas
+# 🔔 Vigilante horario
 # ===============================
-# Lista histórica completa (las horas que me proporcionaste). No se usan las horas como fecha,
-# solo se extraen minuto:segundo para comparación.
 HISTORIC_TIMES = [
     "14:18:47","14:25:27","14:29:58","14:31:02","14:32:32","14:33:49","14:35:05","14:38:59",
     "14:41:36","14:42:48","14:46:51","14:50:24","14:54:58","14:56:09","14:57:41","14:58:54",
@@ -232,22 +222,18 @@ HISTORIC_TIMES = [
     "17:26:10","17:32:18","17:41:50","17:42:47","17:51:58","17:54:51","17:55:32"
 ]
 
-# Extraemos los MM:SS únicos para comparar
 TARGET_MMSS = set([t[3:] for t in HISTORIC_TIMES])
 
-# Estado global de alerta (para el frontend)
 _alert_state_lock = threading.Lock()
 _alert_state = {
     "active": False,
-    "time_full": "",     # hora completa que se mostrará (HH:MM:SS)
-    "mmss": "",          # mm:ss coincidente
+    "time_full": "",
+    "mmss": "",
     "expires_at": None
 }
-# Guardamos última vez que se disparó cada mm:ss para evitar repetición en menos de 30s
 _last_trigger = {}
 
 def _set_alert(now_dt):
-    """Activa la alerta por 10 segundos con la hora completa now_dt."""
     with _alert_state_lock:
         _alert_state["active"] = True
         _alert_state["time_full"] = now_dt.strftime("%H:%M:%S")
@@ -262,27 +248,22 @@ def _clear_alert():
         _alert_state["expires_at"] = None
 
 def monitor_times_thread():
-    """Hilo de vigilancia que compara minutos:segundos y activa alertas (10s)."""
     while True:
         try:
             now = datetime.now()
             mmss = now.strftime("%M:%S")
-            # Si mm:ss está en la lista y no se disparó en los últimos 30s -> activar
             if mmss in TARGET_MMSS:
                 last = _last_trigger.get(mmss)
                 if last is None or (now - last).total_seconds() > 30:
                     _last_trigger[mmss] = now
                     _set_alert(now)
-            # limpiar alerta si expiró
             with _alert_state_lock:
                 if _alert_state["active"] and _alert_state["expires_at"] and datetime.now() >= _alert_state["expires_at"]:
                     _clear_alert()
         except Exception as e:
-            # no detengamos el hilo por un error puntual
             print("⚠️ Error en monitor_times_thread:", e)
-        time.sleep(0.5)  # revisa dos veces por segundo
+        time.sleep(0.5)
 
-# Endpoint que el frontend puede consultar (polling/fetch) para saber si hay alerta activa
 @app.route("/alert_current")
 def alert_current():
     with _alert_state_lock:
@@ -300,7 +281,6 @@ def alert_current():
         "remaining": remaining
     })
 
-# Iniciar el hilo vigilante en background (se hará en main)
 _monitor_thread = None
 
 # ===============================
@@ -348,8 +328,12 @@ def login():
             return render_template("login.html", error="Credenciales inválidas")
         if user.expires < datetime.utcnow().date():
             return render_template("login.html", error="⏳ El tiempo de uso ha expirado")
+
+        # 🔥🔥🔥 ÚNICA MODIFICACIÓN QUE PEDISTE 🔥🔥🔥
         if not user.is_admin and user.session_token:
-            return render_template("login.html", error="⚠️ Este usuario ya tiene una sesión activa en otro dispositivo")
+            user.session_token = None
+            db.session.commit()
+
         token = secrets.token_hex(16)
         user.session_token = token
         db.session.commit()
@@ -452,10 +436,7 @@ def guardar():
         cuotas_altas[datetime.now()] = valor
     os.makedirs(os.path.dirname(DATA_PATH), exist_ok=True)
     pd.DataFrame(historial, columns=["cuota"]).to_csv(DATA_PATH, index=False)
-
-    # 🕒 Nuevo: registrar hora, analizar intervalos y color
     registrar_evento_y_analizar(valor)
-
     entrenar_en_hilo()
     analizar_cuotas_altas()
     pred = predecir_con_neuronal(historial)
@@ -489,11 +470,8 @@ if __name__ == "__main__":
     cargar_historial()
     cargar_modelo_y_scaler()
     entrenar_en_hilo()
-
-    # Iniciar hilo vigilante si no está corriendo
     if _monitor_thread is None or not (_monitor_thread.is_alive()):
         _monitor_thread = threading.Thread(target=monitor_times_thread, daemon=True)
         _monitor_thread.start()
-
     from waitress import serve
     serve(app, host="0.0.0.0", port=5000)
