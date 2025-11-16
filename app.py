@@ -19,17 +19,11 @@ import secrets
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "cambia_esta_clave_secreta_por_una_muy_larga")
 
-# ===============================
-# Configuración base de datos PostgreSQL
-# ===============================
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
-# ===============================
-# Configuración global
-# ===============================
 DATA_PATH = os.path.join("static", "historial.csv")
 MODEL_PATH = os.path.join("static", "modelo_ia.keras")
 SCALER_PATH = os.path.join("static", "scaler.pkl")
@@ -46,9 +40,6 @@ cuotas_altas = {}
 ADMIN_USER = "danmjp@gmail.com"
 ADMIN_PASS = "Colombia321*"
 
-# ===============================
-# Modelo de Usuario (SQLAlchemy)
-# ===============================
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -58,9 +49,6 @@ class User(db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     session_token = db.Column(db.String(200), nullable=True)
 
-# ===============================
-# Funciones base IA
-# ===============================
 def cargar_historial():
     global historial
     if os.path.exists(DATA_PATH):
@@ -168,9 +156,6 @@ def analizar_cuotas_altas():
                 print("🟢 Pronóstico: próxima cuota probable mayor a 2.00 (por cuota alta detectada)")
                 del cuotas_altas[tiempo]
 
-# ===============================
-# 🔍 Análisis intervalos y color
-# ===============================
 def registrar_evento_y_analizar(valor_actual):
     ahora = datetime.now()
     if not os.path.exists(INTERVALOS_PATH):
@@ -214,9 +199,6 @@ def analizar_patrones_intervalos(valores):
     if repetidos:
         print("🔁 Patrones de intervalo detectados:", repetidos)
 
-# ===============================
-# 🔔 Vigilante horario
-# ===============================
 HISTORIC_TIMES = [
     "14:18:47","14:25:27","14:29:58","14:31:02","14:32:32","14:33:49","14:35:05","14:38:59",
     "14:41:36","14:42:48","14:46:51","14:50:24","14:54:58","14:56:09","14:57:41","14:58:54",
@@ -288,9 +270,6 @@ def alert_current():
 
 _monitor_thread = None
 
-# ===============================
-# 🔐 NUEVA RUTA — VERIFICAR SESIÓN
-# ===============================
 @app.route("/check_session")
 def check_session():
     if "user" not in session or "token" not in session:
@@ -298,27 +277,15 @@ def check_session():
     user = User.query.filter_by(email=session["user"]).first()
     if not user or user.session_token != session["token"]:
         return jsonify({"valid": False})
-    # además comprobar expiración
     if user.expires and user.expires < datetime.utcnow().date():
         return jsonify({"valid": False})
     return jsonify({"valid": True})
 
-# ===============================
-# 🔐 NUEVA RUTA — STREAM SSE PARA CIERRE INMEDIATO EN CLIENTES
-# ===============================
 @app.route("/session_stream")
 def session_stream():
-    """
-    Endpoint SSE que el cliente puede conectar (EventSource).
-    Envía 'logout' cuando el token de sesión ya no coincide,
-    permitiendo al cliente redirigir inmediatamente al /login.
-    """
     def gen():
         try:
-            # guardamos el token y usuario que vienen en la cookie del request
-            # Flask's session is cookie-based; reading session here uses the request context.
             while True:
-                # si no hay sesión en el cliente -> forzar logout
                 if "user" not in session or "token" not in session:
                     yield "data: logout\n\n"
                     break
@@ -326,15 +293,12 @@ def session_stream():
                 if not user:
                     yield "data: logout\n\n"
                     break
-                # si token del usuario cambió en servidor -> notificar logout
                 if user.session_token != session.get("token"):
                     yield "data: logout\n\n"
                     break
-                # si expiró -> notificar logout
                 if user.expires and user.expires < datetime.utcnow().date():
                     yield "data: logout\n\n"
                     break
-                # mantener conexión viva cada 2s
                 yield "data: ping\n\n"
                 time.sleep(2)
         except GeneratorExit:
@@ -343,9 +307,22 @@ def session_stream():
             return
     return Response(gen(), mimetype="text/event-stream")
 
-# ===============================
-# Decoradores de autenticación
-# ===============================
+# ======= FIX: admin_required antiguo restaurado =======
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if "user" not in session:
+            return redirect(url_for("login"))
+        user = User.query.filter_by(email=session["user"]).first()
+        if not user:
+            session.clear()
+            return redirect(url_for("login"))
+        if not user.is_admin:
+            return redirect(url_for("panel"))
+        return f(*args, **kwargs)
+    return decorated
+# ======================================================
+
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -361,30 +338,10 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
-def admin_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        if "user" not in session or "token" not in session:
-            return redirect(url_for("login"))
-        user = User.query.filter_by(email=session["user"]).first()
-        if not user or user.session_token != session["token"]:
-            session.clear()
-            return redirect(url_for("login"))
-        if not user.is_admin:
-            return redirect(url_for("panel"))
-        return f(*args, **kwargs)
-    return decorated
-
-# ===============================
-# Redirección raíz
-# ===============================
 @app.route("/")
 def root_redirect():
     return redirect("/login")
 
-# ===============================
-# Login / Logout
-# ===============================
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -395,20 +352,14 @@ def login():
             return render_template("login.html", error="Credenciales inválidas")
         if user.expires and user.expires < datetime.utcnow().date():
             return render_template("login.html", error="⏳ El tiempo de uso ha expirado")
-
-        # Forzar cierre de sesiones previas: dejar token previo nulo y luego asignar uno nuevo.
-        # Esto provoca que otros clientes conectados detecten el cambio y se cierren.
         user.session_token = None
         db.session.commit()
-
         token = secrets.token_hex(16)
         user.session_token = token
         db.session.commit()
-
         session["user"] = user.email
         session["token"] = token
         return redirect(url_for("panel"))
-
     return render_template("login.html")
 
 @app.route("/logout")
@@ -421,9 +372,6 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
-# ===============================
-# Panel Admin
-# ===============================
 @app.route("/admin", methods=["GET", "POST"])
 @admin_required
 def admin_panel():
@@ -480,9 +428,6 @@ def extender_usuario(id):
         db.session.commit()
     return redirect(url_for("admin_panel"))
 
-# ===============================
-# IA Routes
-# ===============================
 @app.route("/panel")
 @login_required
 def panel():
@@ -532,9 +477,6 @@ def limpiar_todo():
 def ping():
     return "pong", 200
 
-# ===============================
-# Main
-# ===============================
 if __name__ == "__main__":
     cargar_historial()
     cargar_modelo_y_scaler()
