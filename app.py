@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session 
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session, Response
 import pandas as pd
 import os
 import numpy as np
@@ -296,6 +296,40 @@ def check_session():
     return jsonify({"valid": True})
 
 # ===============================
+# 🔐 NUEVA RUTA — STREAM SSE PARA CIERRE INMEDIATO EN CLIENTES
+# ===============================
+@app.route("/session_stream")
+def session_stream():
+    """
+    Endpoint SSE que el cliente puede conectar (EventSource).
+    Envía 'logout' cuando el token de sesión ya no coincide,
+    permitiendo al cliente redirigir inmediatamente al /login.
+    """
+    def gen():
+        try:
+            while True:
+                # si no hay sesión, indicar logout y terminar
+                if "user" not in session or "token" not in session:
+                    yield "data: logout\n\n"
+                    break
+                user = User.query.filter_by(email=session["user"]).first()
+                if not user:
+                    yield "data: logout\n\n"
+                    break
+                # si token del usuario cambió en servidor -> notificar logout
+                if user.session_token != session.get("token"):
+                    yield "data: logout\n\n"
+                    break
+                # mantener conexión viva cada 2s
+                yield "data: ping\n\n"
+                time.sleep(2)
+        except GeneratorExit:
+            return
+        except Exception:
+            return
+    return Response(gen(), mimetype="text/event-stream")
+
+# ===============================
 # Decoradores de autenticación
 # ===============================
 from functools import wraps
@@ -348,7 +382,7 @@ def login():
         if user.expires < datetime.utcnow().date():
             return render_template("login.html", error="⏳ El tiempo de uso ha expirado")
 
-        # Limpiar cualquier sesión previa
+        # Limpiar cualquier sesión previa (forzar cierre anterior)
         user.session_token = None
         db.session.commit()
 
