@@ -1,114 +1,77 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Login - Aviator Pronosticador IA</title>
-<style>
-    /* 🎨 Fondo con collage */
-    body {
-        margin: 0;
-        padding: 0;
-        font-family: Arial, sans-serif;
-        color: #0ff;
-        height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #000;
-        overflow: hidden;
-        position: relative;
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Login - Aviator Pronosticador IA</title>
+  <style>
+    :root{
+      --bg:#000;
+      --panel:#0b0b0b;
+      --accent:#0ff;
+      --muted:#9ff;
+      --danger:#f44;
+      --card-shadow:0 8px 24px rgba(0,255,255,0.06);
+      --radius:12px;
+      --input-radius:8px;
     }
-
-    /* Collage: 4 imágenes */
-    .collage {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: 1fr 1fr;
-        z-index: 0;
+    html,body{height:100%;margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--accent);}
+    .wrap{min-height:100%;display:flex;align-items:center;justify-content:center;padding:28px;}
+    .card{width:100%;max-width:520px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));border-radius:var(--radius);box-shadow:var(--card-shadow);padding:28px;border:1px solid rgba(0,255,255,0.06);}
+    h1{margin:0 0 10px;font-size:20px}
+    p.lead{margin:0 0 18px;color:var(--muted);font-size:13px}
+    form{display:block;}
+    label{display:block;margin:10px 0 6px;font-size:13px;color:var(--muted)}
+    input[type="email"], input[type="password"], input[type="text"]{
+      width:100%;padding:12px 14px;border-radius:var(--input-radius);border:1px solid rgba(0,255,255,0.07);
+      background:transparent;color:var(--accent);outline:none;font-size:14px;box-sizing:border-box;
     }
-
-    .collage img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        opacity: 0.5;
-        transition: transform 10s ease-in-out, opacity 3s;
+    input::placeholder{color:#5ee;}
+    .row{display:flex;gap:10px;align-items:center;margin-top:14px}
+    button{cursor:pointer;padding:10px 14px;border-radius:10px;border:0;background:var(--accent);color:#000;font-weight:600}
+    .secondary{background:transparent;border:1px solid rgba(0,255,255,0.08);color:var(--accent)}
+    .error{background:rgba(244,68,68,0.08);border:1px solid rgba(244,68,68,0.14);color:var(--danger);padding:10px;border-radius:8px;margin-bottom:12px}
+    .footer{margin-top:18px;font-size:13px;color:var(--muted);display:flex;justify-content:space-between;align-items:center}
+    .logo{font-weight:700;color:var(--accent);letter-spacing:0.6px}
+    .small{font-size:12px;color:var(--muted)}
+    @media (max-width:520px){
+      .card{padding:18px}
     }
-
-    /* Animación sutil de zoom */
-    .collage img:hover {
-        transform: scale(1.1);
-        opacity: 0.7;
-    }
-
-    /* Caja del login */
-    .card {
-        position: relative;
-        z-index: 2;
-        max-width: 400px;
-        margin: 0 auto;
-        padding: 20px;
-        background: rgba(17, 17, 17, 0.9);
-        border-radius: 10px;
-        box-shadow: 0 0 12px cyan;
-    }
-
-    input {
-        width: 100%;
-        padding: 10px;
-        margin: 8px 0;
-        border-radius: 6px;
-        border: 1px solid #0ff;
-        background: #000;
-        color: #0ff;
-    }
-
-    button {
-        width: 100%;
-        padding: 10px;
-        background: #0ff;
-        color: #000;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        font-weight: bold;
-    }
-
-    .small { font-size: 0.9em; color: #9ff; margin-top: 8px; text-align: center; }
-    .error { color: #ff8080; margin-bottom: 10px; }
-</style>
+  </style>
 </head>
 <body>
+  <div class="wrap">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div>
+          <div class="logo">✈️ Aviator Pronosticador IA</div>
+          <p class="lead">Accede a tu panel y gestiona usuarios</p>
+        </div>
+        <div class="small">Servidor</div>
+      </div>
 
-<!-- 🖼️ Collage de fondo -->
-<div class="collage">
-    <img src="{{ url_for('static', filename='images/fondo1.jpg') }}" alt="">
-    <img src="{{ url_for('static', filename='images/fondo2.jpg') }}" alt="">
-    <img src="{{ url_for('static', filename='images/fondo3.jpg') }}" alt="">
-    <img src="{{ url_for('static', filename='images/fondo4.jpg') }}" alt="">
-</div>
+      {% if error %}
+      <div class="error">{{ error }}</div>
+      {% endif %}
 
-<!-- 🔐 Login -->
-<div class="card">
-    <h2 style="margin:0 0 8px 0">🔐 Iniciar sesión</h2>
-    {% if error %}
-        <div class="error">{{ error }}</div>
-    {% endif %}
-    <form method="post">
-        <label>Correo</label>
-        <input name="email" type="email" required placeholder="tu@correo.com" />
-        <label>Contraseña</label>
-        <input name="password" type="password" required placeholder="Contraseña" />
-        <button type="submit">Entrar</button>
-    </form>
-    <div class="small">Si eres administrador usa la cuenta configurada.</div>
-</div>
+      <form method="POST" action="{{ url_for('login') }}" autocomplete="on">
+        <label for="email">Correo</label>
+        <input id="email" name="email" type="email" placeholder="usuario@ejemplo.com" required value="{{ request.form.email if request.form.email else '' }}">
 
+        <label for="password">Contraseña</label>
+        <input id="password" name="password" type="password" placeholder="contraseña" required>
+
+        <div class="row" style="margin-top:18px">
+          <button type="submit">Iniciar sesión</button>
+          <a href="/" class="secondary" style="display:inline-block;text-decoration:none;padding:10px 12px;border-radius:10px;color:var(--accent);border:1px solid rgba(0,255,255,0.06);">Inicio</a>
+        </div>
+      </form>
+
+      <div class="footer">
+        <div class="small">¿Problemas? Contacta al administrador.</div>
+        <div class="small">© {{ now().year if now is defined else "" }}</div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
