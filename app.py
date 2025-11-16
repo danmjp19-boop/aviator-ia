@@ -286,24 +286,24 @@ _monitor_thread = None
 # ===============================
 # Decoradores de autenticación
 # ===============================
+from functools import wraps
+
 def login_required(f):
-    from functools import wraps
     @wraps(f)
     def decorated(*args, **kwargs):
         if "user" not in session or "token" not in session:
-            return redirect(url_for("login"))
+            return jsonify({"error": "unauthorized"}), 401
         user = User.query.filter_by(email=session["user"]).first()
         if not user or user.expires < datetime.utcnow().date():
             session.clear()
-            return redirect(url_for("login"))
+            return jsonify({"error": "expired"}), 401
         if user.session_token != session["token"]:
             session.clear()
-            return redirect(url_for("login"))
+            return jsonify({"error": "invalid"}), 401
         return f(*args, **kwargs)
     return decorated
 
 def admin_required(f):
-    from functools import wraps
     @wraps(f)
     def decorated(*args, **kwargs):
         if "user" not in session:
@@ -329,7 +329,6 @@ def login():
         if user.expires < datetime.utcnow().date():
             return render_template("login.html", error="⏳ El tiempo de uso ha expirado")
 
-        # 🔥🔥🔥 ÚNICA MODIFICACIÓN QUE PEDISTE 🔥🔥🔥
         if not user.is_admin and user.session_token:
             user.session_token = None
             db.session.commit()
@@ -337,9 +336,11 @@ def login():
         token = secrets.token_hex(16)
         user.session_token = token
         db.session.commit()
+
         session["user"] = user.email
         session["token"] = token
         return redirect(url_for("index"))
+
     return render_template("login.html")
 
 @app.route("/logout")
