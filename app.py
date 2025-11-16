@@ -310,9 +310,16 @@ def admin_required(f):
             return redirect(url_for("login"))
         user = User.query.filter_by(email=session["user"]).first()
         if not user or not user.is_admin:
-            return redirect(url_for("index"))
+            return redirect(url_for("panel"))
         return f(*args, **kwargs)
     return decorated
+
+# ===============================
+# Redirección raíz
+# ===============================
+@app.route("/")
+def root_redirect():
+    return redirect("/login")
 
 # ===============================
 # Login / Logout
@@ -339,7 +346,7 @@ def login():
 
         session["user"] = user.email
         session["token"] = token
-        return redirect(url_for("index"))
+        return redirect(url_for("panel"))
 
     return render_template("login.html")
 
@@ -359,7 +366,7 @@ def logout():
 @app.route("/admin", methods=["GET", "POST"])
 @admin_required
 def admin_panel():
-    if request.method == "POST":
+    if request.method == "POST"]:
         email = request.form.get("email")
         password = request.form.get("password")
         dias = int(request.form.get("dias", 1))
@@ -415,9 +422,9 @@ def extender_usuario(id):
 # ===============================
 # IA Routes
 # ===============================
-@app.route("/")
+@app.route("/panel")
 @login_required
-def index():
+def panel():
     cargar_historial()
     usuario_actual = session.get("user", "Desconocido")
     return render_template("index.html", historial=historial, usuario=usuario_actual)
