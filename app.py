@@ -96,7 +96,7 @@ def cargar_modelo_y_scaler():
             model = construir_modelo(WINDOW)
             scaler = MinMaxScaler()
     except Exception as e:
-        print(⚠️ Error cargando modelo:", e)
+        print("⚠️ Error cargando modelo:", e)
         model = construir_modelo(WINDOW)
         scaler = MinMaxScaler()
 
