@@ -24,9 +24,6 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
-with app.app_context():
-    db.create_all()
-
 # ===============================
 # Configuración global
 # ===============================
@@ -57,6 +54,9 @@ class User(db.Model):
     expires = db.Column(db.Date, nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
     session_token = db.Column(db.String(200), nullable=True)
+    
+with app.app_context():
+    db.create_all()
 
 # ===============================
 # Funciones base IA
