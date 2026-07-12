@@ -310,7 +310,7 @@ def login_required(f):
             # Permitir acceso al administrador
 if session.get("user") == ADMIN_USER and session.get("token") == "admin":
     return f(*args, **kwargs)
-        user = User.query.filter_by(email=session["user"]).first()
+user = User.query.filter_by(email=session["user"]).first()
         if not user or user.expires < datetime.utcnow().date():
             session.clear()
             return jsonify({"error": "expired"}), 401
