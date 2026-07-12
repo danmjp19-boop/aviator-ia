@@ -305,36 +305,48 @@ from functools import wraps
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
+
         if "user" not in session or "token" not in session:
             return jsonify({"error": "unauthorized"}), 401
-            # Permitir acceso al administrador
-if session.get("user") == ADMIN_USER and session.get("token") == "admin":
-    return f(*args, **kwargs)
-user = User.query.filter_by(email=session["user"]).first()
+
+        # Permitir acceso al administrador
+        if session.get("user") == ADMIN_USER and session.get("token") == "admin":
+            return f(*args, **kwargs)
+
+        user = User.query.filter_by(email=session["user"]).first()
+
         if not user or user.expires < datetime.utcnow().date():
             session.clear()
             return jsonify({"error": "expired"}), 401
+
         if user.session_token != session["token"]:
             session.clear()
             return jsonify({"error": "invalid"}), 401
+
         return f(*args, **kwargs)
+
     return decorated
+
 
 def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
+
         if "user" not in session:
             return redirect(url_for("login"))
-        # Permitir administrador fijo
-if session.get("user") == ADMIN_USER and session.get("token") == "admin":
-    return f(*args, **kwargs)
 
-user = User.query.filter_by(email=session["user"]).first()
+        # Permitir administrador fijo
+        if session.get("user") == ADMIN_USER and session.get("token") == "admin":
+            return f(*args, **kwargs)
+
+        user = User.query.filter_by(email=session["user"]).first()
+
         if not user or not user.is_admin:
             return redirect(url_for("panel"))
-        return f(*args, **kwargs)
-    return decorated
 
+        return f(*args, **kwargs)
+
+    return decorated
 # ===============================
 # Redirección raíz
 # ===============================
