@@ -344,6 +344,11 @@ def login():
     if request.method == "POST":
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "").strip()
+                # Acceso administrador
+        if email == ADMIN_USER and password == ADMIN_PASS:
+            session["user"] = ADMIN_USER
+            session["token"] = "admin"
+            return redirect(url_for("admin_panel"))
         user = User.query.filter_by(email=email).first()
         if not user or not check_password_hash(user.password, password):
             return render_template("login.html", error="Usuario no existe o tiene 0 dias")
