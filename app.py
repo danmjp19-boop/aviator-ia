@@ -13,6 +13,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 import time
+from routes.auto_betano import auto_betano
 
 app = Flask(__name__)
 app.secret_key = "cambia_esta_clave_secreta_por_una_muy_larga"
