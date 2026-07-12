@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Aviator IA Auto",
+  "version": "1.0",
+  "description": "Lee automáticamente las cuotas de Betano",
+  "permissions": [
+    "activeTab"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://betano.co/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
