@@ -470,27 +470,47 @@ def panel():
     cargar_historial()
     usuario_actual = session.get("user", "Desconocido")
     return render_template("index.html", historial=historial, usuario=usuario_actual)
+    
+def procesar_cuota(valor):
 
+    historial.append(valor)
+
+    if len(historial) > 100:
+        historial.pop(0)
+
+    if valor >= 8.00:
+        cuotas_altas[datetime.now()] = valor
+
+    os.makedirs(os.path.dirname(DATA_PATH), exist_ok=True)
+
+    pd.DataFrame(historial, columns=["cuota"]).to_csv(DATA_PATH, index=False)
+
+    registrar_evento_y_analizar(valor)
+
+    entrenar_en_hilo()
+
+    analizar_cuotas_altas()
+
+    pred = predecir_con_neuronal(historial)
+
+    return pred
+    
 @app.route("/guardar", methods=["POST"])
 @login_required
 def guardar():
+
     cuota = request.form.get("cuota", "").strip()
+
     try:
         valor = float(cuota)
     except:
         return jsonify({"error": "Valor inválido"})
-    historial.append(valor)
-    if len(historial) > 100:
-        historial.pop(0)
-    if valor >= 8.00:
-        cuotas_altas[datetime.now()] = valor
-    os.makedirs(os.path.dirname(DATA_PATH), exist_ok=True)
-    pd.DataFrame(historial, columns=["cuota"]).to_csv(DATA_PATH, index=False)
-    registrar_evento_y_analizar(valor)
-    entrenar_en_hilo()
-    analizar_cuotas_altas()
-    pred = predecir_con_neuronal(historial)
-    return jsonify({"prediccion": pred if pred else "clear"})
+
+    pred = procesar_cuota(valor)
+
+    return jsonify({
+        "prediccion": pred if pred else "clear"
+    })
 
 @app.route("/borrar_ultimo", methods=["POST"])
 @login_required
