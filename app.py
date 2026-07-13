@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session 
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from flask_cors import CORS
 import pandas as pd
 import os
 import numpy as np
@@ -16,6 +17,7 @@ import time
 from routes.auto_betano import auto_betano
 
 app = Flask(__name__)
+CORS(app)
 app.register_blueprint(auto_betano)
 app.secret_key = "cambia_esta_clave_secreta_por_una_muy_larga"
 
