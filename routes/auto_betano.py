@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from flask import current_app
 
 auto_betano = Blueprint("auto_betano", __name__)
 
