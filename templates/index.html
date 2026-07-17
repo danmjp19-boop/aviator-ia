@@ -304,7 +304,32 @@ document.addEventListener("DOMContentLoaded",()=>{
   actualizarHora();
 
   document.getElementById('grafico').addEventListener('dblclick',()=>grafico.resetZoom());
+  setInterval(() => {
 
+    fetch("/historial")
+        .then(r => r.json())
+        .then(data => {
+
+            historialDiv.innerHTML = "";
+
+            data.historial.forEach(c => {
+                const span = document.createElement("span");
+                span.innerText = Number(c).toFixed(2);
+                span.style.color = "white";
+                historialDiv.appendChild(span);
+            });
+
+            mensajeIA.innerText =
+                data.prediccion && data.prediccion !== "clear"
+                ? data.prediccion
+                : "";
+
+            actualizarGrafico();
+
+        });
+
+}, 1000);
+  
   const ro=new MutationObserver(()=>{actualizarGrafico();clampOrResetScales(grafico);});
   ro.observe(historialDiv,{childList:true});
   actualizarGrafico();
