@@ -532,6 +532,13 @@ def limpiar_todo():
 @app.route('/ping')
 def ping():
     return "pong", 200
+    @app.route("/historial")
+@login_required
+def obtener_historial():
+    return jsonify({
+        "historial": historial,
+        "prediccion": predecir_con_neuronal(historial)
+    })
 
 # ===============================
 # Main
