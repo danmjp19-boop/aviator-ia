@@ -14,11 +14,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 import time
-from routes.auto_betano import auto_betano
+# from routes.auto_betano import auto_betano
 
 app = Flask(__name__)
 CORS(app)
-app.register_blueprint(auto_betano)
+# app.register_blueprint(auto_betano)
 app.secret_key = "cambia_esta_clave_secreta_por_una_muy_larga"
 
 # ===============================
@@ -536,6 +536,9 @@ def ping():
 # ===============================
 # Main
 # ===============================
+from routes.auto_betano import auto_betano
+app.register_blueprint(auto_betano)
+
 if __name__ == "__main__":
     cargar_historial()
     cargar_modelo_y_scaler()
