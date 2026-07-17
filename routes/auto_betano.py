@@ -11,9 +11,14 @@ def recibir_cuota():
     if not data:
         return jsonify({"ok": False, "error": "Sin datos"}), 400
 
-    print("CUOTA RECIBIDA:", data)
+    try:
+        valor = float(data["cuota"])
+    except:
+        return jsonify({"ok": False, "error": "Cuota inválida"}), 400
+
+    pred = procesar_cuota(valor)
 
     return jsonify({
         "ok": True,
-        "recibido": data
+        "prediccion": pred if pred else "clear"
     })
