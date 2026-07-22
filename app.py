@@ -15,6 +15,8 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 import time
 # from routes.auto_betano import auto_betano
+from feature_engineering import crear_dataset
+from xgboost_predictor import XGBoostPredictor
 
 app = Flask(__name__)
 CORS(app)
@@ -42,6 +44,7 @@ scaler = None
 WINDOW = 5
 MIN_SAMPLES = 10
 training_lock = threading.Lock()
+xgb_predictor = XGBoostPredictor()
 
 cuotas_altas = {}
 ADMIN_USER = "danmjp@gmail.com"
@@ -488,6 +491,18 @@ def procesar_cuota(valor):
     registrar_evento_y_analizar(valor)
 
     entrenar_en_hilo()
+    
+    # ==========================
+# Entrenar XGBoost
+# ==========================
+try:
+    dataset = crear_dataset(historial)
+
+    if not dataset.empty:
+        xgb_predictor.entrenar(dataset)
+
+except Exception as e:
+    print("Error XGBoost:", e)
 
     analizar_cuotas_altas()
 
