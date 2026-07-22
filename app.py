@@ -490,19 +490,18 @@ def procesar_cuota(valor):
 
     registrar_evento_y_analizar(valor)
 
+    # Entrenar TensorFlow
     entrenar_en_hilo()
-    
-    # ==========================
-# Entrenar XGBoost
-# ==========================
-try:
-    dataset = crear_dataset(historial)
 
-    if not dataset.empty:
-        xgb_predictor.entrenar(dataset)
+    # Entrenar XGBoost
+    try:
+        dataset = crear_dataset(historial)
 
-except Exception as e:
-    print("Error XGBoost:", e)
+        if not dataset.empty:
+            xgb_predictor.entrenar(dataset)
+
+    except Exception as e:
+        print("Error XGBoost:", e)
 
     analizar_cuotas_altas()
 
