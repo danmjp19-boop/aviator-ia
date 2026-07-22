@@ -12,3 +12,4 @@ waitress==3.0.0
 Flask-Migrate==4.0.5
 alembic==1.14.0
 flask-cors
+xgboost==3.0.4
