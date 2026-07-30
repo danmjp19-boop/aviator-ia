@@ -495,19 +495,19 @@ def procesar_cuota(valor):
 
     # Entrenar XGBoost
     try:
-        dataset = crear_dataset(historial)
+    dataset = crear_dataset(historial)
 
-        if not dataset.empty:
-    xgb_predictor.entrenar(dataset)
+    if not dataset.empty:
+        xgb_predictor.entrenar(dataset)
 
-    ultima = dataset.drop(columns=["objetivo"]).tail(1)
+        ultima = dataset.drop(columns=["objetivo"]).tail(1)
 
-pred_xgb = xgb_predictor.predecir(ultima)
+        pred_xgb = xgb_predictor.predecir(ultima)
 
-print(f"🤖 XGBoost: {pred_xgb:.2%}")
+        print(f"🤖 XGBoost: {pred_xgb:.2%}")
 
-    except Exception as e:
-        print("Error XGBoost:", e)
+except Exception as e:
+    print("Error XGBoost:", e)
 
     analizar_cuotas_altas()
 
