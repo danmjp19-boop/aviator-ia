@@ -47,6 +47,64 @@ training_lock = threading.Lock()
 xgb_predictor = XGBoostPredictor()
 
 cuotas_altas = {}
+# ============================================
+# DETECTOR TEMPORAL DE CUOTAS
+# ============================================
+
+CUOTAS_TEMPORALES = {
+    2.60,
+    2.65,
+    2.80,
+    2.85,
+    2.90,
+    3.60,
+    3.65,
+    3.80,
+    3.85
+}
+
+alertas_temporales = []
+
+alertas_lock = threading.Lock()
+
+
+def detectar_cuota_temporal(valor):
+
+    valor = round(float(valor), 2)
+
+    if valor not in CUOTAS_TEMPORALES:
+        return
+
+    ahora = datetime.now()
+
+    hora_aviso = ahora + timedelta(minutes=10, seconds=2)
+
+    alerta = {
+        "cuota": valor,
+        "hora_deteccion": ahora.strftime("%H:%M:%S"),
+        "hora_aviso": hora_aviso.strftime("%H:%M:%S"),
+        "timestamp": hora_aviso,
+        "activa": False
+    }
+
+    with alertas_lock:
+        alertas_temporales.append(alerta)
+
+    print(f"🟢 Alerta creada -> {valor}x | Aviso: {alerta['hora_aviso']}")
+
+def revisar_alertas_temporales():
+
+    ahora = datetime.now()
+
+    with alertas_lock:
+
+        for alerta in alertas_temporales:
+
+            if (not alerta["activa"]) and ahora >= alerta["timestamp"]:
+
+                alerta["activa"] = True
+
+                print(f"🚨 ALERTA ACTIVADA {alerta['cuota']}x")
 ADMIN_USER = "danmjp@gmail.com"
 ADMIN_PASS = "Colombia321*"
 
@@ -260,6 +318,7 @@ def _clear_alert():
 def monitor_times_thread():
     while True:
         try:
+            revisar_alertas_temporales()
             now = datetime.now()
             mmss = now.strftime("%M:%S")
             if mmss in TARGET_MMSS:
@@ -501,6 +560,8 @@ def crear_dataset(historial):
 def procesar_cuota(valor):
 
     historial.append(valor)
+
+    detectar_cuota_temporal(valor)
 
     if len(historial) > 100:
         historial.pop(0)
