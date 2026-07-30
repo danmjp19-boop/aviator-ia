@@ -569,7 +569,20 @@ def procesar_cuota(valor):
         pred = None
         print("❌ Ninguna IA pudo generar predicción.")
 
-    return pred
+    if isinstance(pred, (int, float)):
+
+    porcentaje = pred * 100
+
+    if porcentaje >= 70:
+        pred = f"🟢 ENTRAR ({porcentaje:.2f}%)"
+
+    elif porcentaje >= 60:
+        pred = f"🟡 POSIBLE ENTRADA ({porcentaje:.2f}%)"
+
+    else:
+        pred = "clear"
+
+return pred
 
 @app.route("/guardar", methods=["POST"])
 @login_required
