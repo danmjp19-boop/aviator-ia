@@ -18,14 +18,28 @@ class XGBoostPredictor:
 
     def entrenar(self, df):
 
-        if len(df) < 30:
+        print(f"📊 XGBoost recibió {len(df)} filas")
+
+        # Solo para pruebas
+        if len(df) < 5:
+            print("❌ Muy pocas filas para entrenar")
             return False
+
+        print("🚀 Iniciando entrenamiento XGBoost")
 
         X = df.drop(columns=["objetivo"])
         y = df["objetivo"]
 
+        # Verificar que existan las dos clases
+        if len(y.unique()) < 2:
+            print("⚠️ No hay suficientes clases (0 y 1) para entrenar.")
+            return False
+
         X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42
+            X,
+            y,
+            test_size=0.2,
+            random_state=42
         )
 
         self.model = xgb.XGBClassifier(
@@ -38,6 +52,8 @@ class XGBoostPredictor:
         )
 
         self.model.fit(X_train, y_train)
+
+        print("✅ XGBoost terminó fit()")
 
         pred = self.model.predict(X_test)
 
@@ -52,6 +68,7 @@ class XGBoostPredictor:
     def predecir(self, fila):
 
         if self.model is None:
+            print("⏳ Modelo XGBoost aún no entrenado.")
             return None
 
         prob = self.model.predict_proba(fila)[0][1]
