@@ -497,8 +497,12 @@ def procesar_cuota(valor):
     try:
         dataset = crear_dataset(historial)
 
-        if not dataset.empty:
-            xgb_predictor.entrenar(dataset)
+if not dataset.empty:
+    xgb_predictor.entrenar(dataset)
+
+    pred_xgb = xgb_predictor.predecir(dataset)
+
+    print("🤖 XGBoost:", pred_xgb)
 
     except Exception as e:
         print("Error XGBoost:", e)
