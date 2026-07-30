@@ -18,7 +18,7 @@ class XGBoostPredictor:
 
     def entrenar(self, df):
 
-        if len(df) < 100:
+        if len(df) < 30:
             return False
 
         X = df.drop(columns=["objetivo"])
