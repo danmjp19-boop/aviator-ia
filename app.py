@@ -731,6 +731,19 @@ def alerta_temporal():
         "activa": False
     })
 
+@app.route("/cerrar_alerta_temporal", methods=["POST"])
+@login_required
+def cerrar_alerta_temporal():
+
+    with alertas_lock:
+
+        alertas_temporales[:] = [
+            a for a in alertas_temporales
+            if not a["activa"]
+        ]
+
+    return jsonify({"ok": True})
+
 # ===============================
 # Main
 # ===============================
