@@ -473,7 +473,8 @@ def panel():
     cargar_historial()
     usuario_actual = session.get("user", "Desconocido")
     return render_template("index.html", historial=historial, usuario=usuario_actual)
-    
+
+
 def procesar_cuota(valor):
 
     historial.append(valor)
@@ -495,26 +496,27 @@ def procesar_cuota(valor):
 
     # Entrenar XGBoost
     try:
-    dataset = crear_dataset(historial)
+        dataset = crear_dataset(historial)
 
-    if not dataset.empty:
-        xgb_predictor.entrenar(dataset)
+        if not dataset.empty:
+            xgb_predictor.entrenar(dataset)
 
-        ultima = dataset.drop(columns=["objetivo"]).tail(1)
+            ultima = dataset.drop(columns=["objetivo"]).tail(1)
 
-        pred_xgb = xgb_predictor.predecir(ultima)
+            pred_xgb = xgb_predictor.predecir(ultima)
 
-        print(f"🤖 XGBoost: {pred_xgb:.2%}")
+            print(f"🤖 XGBoost: {pred_xgb:.2%}")
 
-except Exception as e:
-    print("Error XGBoost:", e)
+    except Exception as e:
+        print("Error XGBoost:", e)
 
     analizar_cuotas_altas()
 
     pred = predecir_con_neuronal(historial)
 
     return pred
-    
+
+
 @app.route("/guardar", methods=["POST"])
 @login_required
 def guardar():
