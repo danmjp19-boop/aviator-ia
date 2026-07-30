@@ -497,7 +497,7 @@ def procesar_cuota(valor):
     try:
         dataset = crear_dataset(historial)
 
-if not dataset.empty:
+        if not dataset.empty:
     xgb_predictor.entrenar(dataset)
 
     ultima = dataset.drop(columns=["objetivo"]).tail(1)
