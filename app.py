@@ -516,9 +516,13 @@ def procesar_cuota(valor):
     # Entrenar TensorFlow
     entrenar_en_hilo()
 
+    print("🚀 Entró al bloque de XGBoost")
+    print(f"📊 Historial: {len(historial)} cuotas")
+
     # Entrenar XGBoost
     try:
         dataset = crear_dataset(historial)
+        print(f"📈 Filas del dataset: {len(dataset)}")
 
         if not dataset.empty:
             xgb_predictor.entrenar(dataset)
