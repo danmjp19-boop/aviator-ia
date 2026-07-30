@@ -148,20 +148,21 @@ def entrenar_neuronal():
 
 def predecir_con_neuronal(hist):
     global model, scaler
+
     if model is None or scaler is None or len(hist) < WINDOW:
-        return "clear"
+        return None
+
     ventana = np.array(hist[-WINDOW:], dtype=float).reshape(1, -1)
+
     try:
         ventana_scaled = scaler.transform(ventana)
         prob = float(model.predict(ventana_scaled, verbose=0)[0][0])
+        return prob
+
     except Exception as e:
         print("⚠️ Error prediciendo:", e)
-        return "clear"
-    if prob > 0.6:
-        return "🟢 Entrada al 1.50 y 2.00 alta probabilidad"
-    else:
-        return "clear"
-
+        return None
+        
 def analizar_cuotas_altas():
     global cuotas_altas
     ahora = datetime.now()
