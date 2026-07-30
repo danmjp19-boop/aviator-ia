@@ -519,32 +519,56 @@ def procesar_cuota(valor):
     print("🚀 Entró al bloque de XGBoost")
     print(f"📊 Historial: {len(historial)} cuotas")
 
-    # Entrenar XGBoost
+        # Entrenar XGBoost
     try:
         dataset = crear_dataset(historial)
-        print(f"📈 Filas del dataset: {len(dataset)}")
 
         if not dataset.empty:
+
             xgb_predictor.entrenar(dataset)
 
             ultima = dataset.drop(columns=["objetivo"]).tail(1)
 
             pred_xgb = xgb_predictor.predecir(ultima)
 
-            if pred_xgb is not None:
-                print(f"🤖 XGBoost: {pred_xgb:.2%}")
-            else:
-                print("⏳ XGBoost aún no tiene un modelo entrenado.")
+        else:
+            pred_xgb = None
 
     except Exception as e:
         print("Error XGBoost:", e)
+        pred_xgb = None
 
     analizar_cuotas_altas()
 
-    pred = predecir_con_neuronal(historial)
+    # Predicción TensorFlow
+    pred_tf = predecir_con_neuronal(historial)
+
+    # IA híbrida
+    if pred_tf is not None and pred_xgb is not None:
+
+        print(f"🤖 TensorFlow : {pred_tf:.2%}")
+        print(f"🌳 XGBoost    : {pred_xgb:.2%}")
+
+        pred = (pred_tf * 0.60) + (pred_xgb * 0.40)
+
+        print(f"🧠 IA Híbrida : {pred:.2%}")
+
+    elif pred_tf is not None:
+
+        pred = pred_tf
+        print(f"🤖 Solo TensorFlow : {pred:.2%}")
+
+    elif pred_xgb is not None:
+
+        pred = pred_xgb
+        print(f"🌳 Solo XGBoost : {pred:.2%}")
+
+    else:
+
+        pred = None
+        print("❌ Ninguna IA pudo generar predicción.")
 
     return pred
-
 
 @app.route("/guardar", methods=["POST"])
 @login_required
