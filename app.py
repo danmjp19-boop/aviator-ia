@@ -527,7 +527,10 @@ def procesar_cuota(valor):
 
             pred_xgb = xgb_predictor.predecir(ultima)
 
-            print(f"🤖 XGBoost: {pred_xgb:.2%}")
+            if pred_xgb is not None:
+                print(f"🤖 XGBoost: {pred_xgb:.2%}")
+            else:
+                print("⏳ XGBoost aún no tiene un modelo entrenado.")
 
     except Exception as e:
         print("Error XGBoost:", e)
