@@ -711,6 +711,26 @@ def obtener_historial():
         "prediccion": pred
     })
 
+@app.route("/alerta_temporal")
+@login_required
+def alerta_temporal():
+
+    with alertas_lock:
+
+        for alerta in alertas_temporales:
+
+            if alerta["activa"]:
+
+                return jsonify({
+                    "activa": True,
+                    "cuota": alerta["cuota"],
+                    "hora": alerta["hora_aviso"]
+                })
+
+    return jsonify({
+        "activa": False
+    })
+
 # ===============================
 # Main
 # ===============================
