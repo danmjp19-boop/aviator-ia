@@ -474,6 +474,28 @@ def panel():
     usuario_actual = session.get("user", "Desconocido")
     return render_template("index.html", historial=historial, usuario=usuario_actual)
 
+def crear_dataset(historial):
+
+    if len(historial) < 6:
+        return pd.DataFrame()
+
+    datos = []
+
+    for i in range(5, len(historial)):
+
+        fila = {
+            "c1": historial[i-5],
+            "c2": historial[i-4],
+            "c3": historial[i-3],
+            "c4": historial[i-2],
+            "c5": historial[i-1],
+            "objetivo": 1 if historial[i] >= 2 else 0
+        }
+
+        datos.append(fila)
+
+    return pd.DataFrame(datos)
+
 
 def procesar_cuota(valor):
 
