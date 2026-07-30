@@ -72,6 +72,30 @@ h1{color:#00ffff;margin:6px 0;}
 
   <div id="mensaje_ia"></div>
 
+  <div id="alertaTemporal"
+     style="
+        display:none;
+        margin-top:15px;
+        padding:15px;
+        background:#00aa00;
+        color:white;
+        font-size:22px;
+        font-weight:bold;
+        border-radius:10px;
+        cursor:pointer;
+        animation: titilar 0.8s infinite;
+     ">
+    🚨 ENTRAR 🚨
+</div>
+
+<style>
+@keyframes titilar{
+    0%{opacity:1;}
+    50%{opacity:.2;}
+    100%{opacity:1;}
+}
+</style>
+
   <div id="graficoWrap">
     <canvas id="grafico"></canvas>
   </div>
