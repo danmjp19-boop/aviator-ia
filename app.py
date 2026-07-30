@@ -500,9 +500,11 @@ def procesar_cuota(valor):
 if not dataset.empty:
     xgb_predictor.entrenar(dataset)
 
-    pred_xgb = xgb_predictor.predecir(dataset)
+    ultima = dataset.drop(columns=["objetivo"]).tail(1)
 
-    print("🤖 XGBoost:", pred_xgb)
+pred_xgb = xgb_predictor.predecir(ultima)
+
+print(f"🤖 XGBoost: {pred_xgb:.2%}")
 
     except Exception as e:
         print("Error XGBoost:", e)
