@@ -546,7 +546,7 @@ def procesar_cuota(valor):
     # IA híbrida
     if pred_tf is not None and pred_xgb is not None:
 
-        print(f"🤖 TensorFlow : {pred_tf:.2%}")
+        print(f"🤖 TensorFlow : {pred_tf}")
         print(f"🌳 XGBoost    : {pred_xgb:.2%}")
 
         pred = (pred_tf * 0.60) + (pred_xgb * 0.40)
