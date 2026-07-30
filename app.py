@@ -626,9 +626,28 @@ def ping():
 @app.route("/historial")
 @login_required
 def obtener_historial():
+
+    pred = predecir_con_neuronal(historial)
+
+    if isinstance(pred, (int, float)):
+
+        porcentaje = pred * 100
+
+        if porcentaje >= 70:
+            pred = f"🟢 ENTRAR ({porcentaje:.2f}%)"
+
+        elif porcentaje >= 60:
+            pred = f"🟡 POSIBLE ENTRADA ({porcentaje:.2f}%)"
+
+        else:
+            pred = "clear"
+
+    elif pred is None:
+        pred = "clear"
+
     return jsonify({
         "historial": historial,
-        "prediccion": predecir_con_neuronal(historial)
+        "prediccion": pred
     })
 
 # ===============================
