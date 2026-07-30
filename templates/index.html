@@ -384,6 +384,10 @@ setInterval(() => {
 
 alertaTemporal.onclick = () => {
 
+    fetch("/cerrar_alerta_temporal", {
+        method: "POST"
+    });
+
     alertaTemporal.style.display = "none";
 
 };
