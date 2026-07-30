@@ -520,7 +520,7 @@ def procesar_cuota(valor):
     print("🚀 Entró al bloque de XGBoost")
     print(f"📊 Historial: {len(historial)} cuotas")
 
-        # Entrenar XGBoost
+    # Entrenar XGBoost
     try:
         dataset = crear_dataset(historial)
 
@@ -571,18 +571,18 @@ def procesar_cuota(valor):
 
     if isinstance(pred, (int, float)):
 
-    porcentaje = pred * 100
+        porcentaje = pred * 100
 
-    if porcentaje >= 70:
-        pred = f"🟢 ENTRAR ({porcentaje:.2f}%)"
+        if porcentaje >= 70:
+            pred = f"🟢 ENTRAR ({porcentaje:.2f}%)"
 
-    elif porcentaje >= 60:
-        pred = f"🟡 POSIBLE ENTRADA ({porcentaje:.2f}%)"
+        elif porcentaje >= 60:
+            pred = f"🟡 POSIBLE ENTRADA ({porcentaje:.2f}%)"
 
-    else:
-        pred = "clear"
+        else:
+            pred = "clear"
 
-return pred
+    return pred
 
 @app.route("/guardar", methods=["POST"])
 @login_required
