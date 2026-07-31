@@ -353,6 +353,14 @@ def alert_current():
 
 _monitor_thread = None
 
+if _monitor_thread is None:
+    _monitor_thread = threading.Thread(
+        target=monitor_times_thread,
+        daemon=True
+    )
+    _monitor_thread.start()
+    print("✅ Monitor temporal iniciado")
+
 # ===============================
 # 🔐 NUEVA RUTA — VERIFICAR SESIÓN
 # ===============================
