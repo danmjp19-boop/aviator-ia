@@ -317,21 +317,34 @@ def _clear_alert():
         _alert_state["expires_at"] = None
 
 def monitor_times_thread():
+
+    print("🚀 HILO INICIADO")
+
     while True:
+
+        print("⏱ Revisando alertas...")
+
         try:
+
             revisar_alertas_temporales()
+
             now = datetime.now()
+
             mmss = now.strftime("%M:%S")
+
             if mmss in TARGET_MMSS:
                 last = _last_trigger.get(mmss)
                 if last is None or (now - last).total_seconds() > 30:
                     _last_trigger[mmss] = now
                     _set_alert(now)
+
             with _alert_state_lock:
                 if _alert_state["active"] and _alert_state["expires_at"] and datetime.now() >= _alert_state["expires_at"]:
                     _clear_alert()
+
         except Exception as e:
-            print("⚠️ Error en monitor_times_thread:", e)
+            print("⚠️ Error:", e)
+
         time.sleep(0.5)
 
 @app.route("/alert_current")
