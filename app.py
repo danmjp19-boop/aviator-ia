@@ -69,6 +69,7 @@ alertas_lock = threading.Lock()
 
 
 def detectar_cuota_temporal(valor):
+    print(f"🔎 detectar_cuota_temporal recibió: {valor}")
 
     valor = round(float(valor), 2)
 
@@ -558,6 +559,7 @@ def crear_dataset(historial):
 
 
 def procesar_cuota(valor):
+    print(f"🔥 procesar_cuota recibió: {valor}")
 
     historial.append(valor)
 
