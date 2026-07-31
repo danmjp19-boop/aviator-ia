@@ -41,9 +41,30 @@ h1{color:#00ffff;margin:6px 0;}
 <div class="container">
   <div id="hora-analisis">
     <div id="hora"></div>
-    <div>
-      <input type="text" id="analisisInput" placeholder="1.84x 03:52:27">
-      <button id="analizarBtn">Iniciar</button>
+
+    <div style="display:flex;align-items:center;gap:6px;">
+
+        <input type="text"
+               id="analisisInput"
+               placeholder="1.84x 03:52:27">
+
+        <button id="analizarBtn">Iniciar</button>
+
+        <div id="alertaTemporal"
+             style="
+                display:none;
+                background:#00aa00;
+                color:white;
+                padding:6px 10px;
+                border-radius:8px;
+                font-weight:bold;
+                cursor:pointer;
+                animation:titilar .8s infinite;
+                white-space:nowrap;
+             ">
+            🚨 ENTRAR
+        </div>
+
     </div>
   </div>
 
@@ -71,30 +92,6 @@ h1{color:#00ffff;margin:6px 0;}
   <button class="limpiar" onclick="limpiarPantalla()">🧹 Limpiar Pantalla</button>
 
   <div id="mensaje_ia"></div>
-
-  <div id="alertaTemporal"
-     style="
-        display:none;
-        margin-top:15px;
-        padding:15px;
-        background:#00aa00;
-        color:white;
-        font-size:22px;
-        font-weight:bold;
-        border-radius:10px;
-        cursor:pointer;
-        animation: titilar 0.8s infinite;
-     ">
-    🚨 ENTRAR 🚨
-</div>
-
-<style>
-@keyframes titilar{
-    0%{opacity:1;}
-    50%{opacity:.2;}
-    100%{opacity:1;}
-}
-</style>
 
   <div id="graficoWrap">
     <canvas id="grafico"></canvas>
