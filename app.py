@@ -561,10 +561,6 @@ def procesar_cuota(valor):
 
     historial.append(valor)
 
-    def procesar_cuota(valor):
-
-    historial.append(valor)
-
     # 🔔 Detectar cuotas temporales
     detectar_cuota_temporal(valor)
 
