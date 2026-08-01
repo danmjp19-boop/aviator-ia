@@ -42,12 +42,33 @@ h1{color:#00ffff;margin:6px 0;}
   
     <div id="hora"></div>
 
-    <div style="display:flex;align-items:center;gap:6px;">
+    <div id="hora-analisis">
 
     <div id="hora"></div>
 
-    <div id="estadoIA">
-        ANALIZANDO...
+    <div style="display:flex;align-items:center;">
+
+        <input type="text"
+               id="analisisInput"
+               placeholder="1.84x 03:52:27">
+
+        <button id="analizarBtn">Iniciar</button>
+
+        <div id="alertaTemporal"
+             style="
+                display:none;
+                background:#00aa00;
+                color:white;
+                padding:6px 10px;
+                border-radius:8px;
+                font-weight:bold;
+                cursor:pointer;
+                animation:titilar .8s infinite;
+                white-space:nowrap;
+             ">
+            🚨 ENTRAR
+        </div>
+
     </div>
 
 </div>
