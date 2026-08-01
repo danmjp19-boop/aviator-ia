@@ -738,6 +738,7 @@ def obtener_historial():
 @app.route("/alerta_temporal")
 @login_required
 def alerta_temporal():
+    revisar_alertas_temporales()
 
     with alertas_lock:
 
