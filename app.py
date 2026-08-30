@@ -824,7 +824,13 @@ def procesar_cuota(valor):
         print("Error XGBoost:", e)
         pred_xgb = None
 
-    analizar_cuotas_altas()
+        analizar_cuotas_altas()
+
+    # ============================================
+    # 🧠 EVALUACIÓN RÁPIDA DE TENDENCIA
+    # ============================================
+
+    actualizar_tendencia(historial)
 
     # Predicción TensorFlow
     pred_tf = predecir_con_neuronal(historial)
@@ -853,6 +859,18 @@ def procesar_cuota(valor):
 
         pred = None
         print("❌ Ninguna IA pudo generar predicción.")
+            # ============================================
+    # 🚨 EVALUACIÓN RÁPIDA DE ENTRADA
+    # ============================================
+
+    entrada_rapida = evaluar_senal_rapida(
+        historial,
+        pred_tf,
+        pred_xgb
+    )
+
+    if entrada_rapida:
+        print("🚨 ENTRADA GENERADA POR EVALUACIÓN IA")
 
     if isinstance(pred, (int, float)):
 
