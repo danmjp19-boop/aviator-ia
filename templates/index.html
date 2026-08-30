@@ -98,6 +98,52 @@ h1{color:#00ffff;margin:6px 0;}
   <button class="limpiar" onclick="limpiarPantalla()">🧹 Limpiar Pantalla</button>
 
   <div id="mensaje_ia"></div>
+  
+  <div id="analisisTendencia"
+     style="
+        width:100%;
+        margin-top:10px;
+        padding:10px;
+        border-radius:10px;
+        background:#111;
+        border:2px solid cyan;
+        box-shadow:0 0 8px cyan;
+        display:none;
+     ">
+
+    <div id="tendenciaTexto"
+         style="
+            font-size:1.5em;
+            font-weight:bold;
+         ">
+    </div>
+
+    <div id="tiempoTendencia"
+         style="
+            font-size:0.9em;
+            margin-top:4px;
+            color:white;
+         ">
+    </div>
+
+    <div id="aciertoIA"
+         style="
+            font-size:1em;
+            margin-top:4px;
+            color:yellow;
+            font-weight:bold;
+         ">
+    </div>
+
+    <div id="entradaIA"
+         style="
+            font-size:1.5em;
+            margin-top:6px;
+            font-weight:bold;
+         ">
+    </div>
+
+</div>
 
   <div id="graficoWrap">
     <canvas id="grafico"></canvas>
@@ -133,6 +179,20 @@ document.addEventListener("DOMContentLoaded",()=>{
   const display=document.getElementById("display");
   const historialDiv=document.getElementById("historial");
   const mensajeIA=document.getElementById("mensaje_ia");
+  const analisisTendencia =
+    document.getElementById("analisisTendencia");
+
+const tendenciaTexto =
+    document.getElementById("tendenciaTexto");
+
+const tiempoTendencia =
+    document.getElementById("tiempoTendencia");
+
+const aciertoIA =
+    document.getElementById("aciertoIA");
+
+const entradaIA =
+    document.getElementById("entradaIA");
   const horaDiv=document.getElementById("hora");
   const input=document.getElementById("analisisInput");
   const btn=document.getElementById("analizarBtn");
@@ -352,6 +412,47 @@ document.addEventListener("DOMContentLoaded",()=>{
                 : "";
 
             actualizarGrafico();
+
+          // ============================================
+// 🧠 MOSTRAR TENDENCIA IA
+// ============================================
+
+if (data.tendencia) {
+
+    analisisTendencia.style.display = "block";
+
+    if (data.tendencia === "alcista") {
+
+        tendenciaTexto.innerText = "🟢 TENDENCIA ALCISTA";
+        tendenciaTexto.style.color = "lime";
+
+    } else if (data.tendencia === "bajista") {
+
+        tendenciaTexto.innerText = "🔴 TENDENCIA BAJISTA";
+        tendenciaTexto.style.color = "red";
+
+    }
+
+    tiempoTendencia.innerText =
+        `DESDE HACE ${data.minutos_tendencia} MIN`;
+
+    aciertoIA.innerText =
+        `🎯 ACIERTO IA: ${data.acierto_ia}%`;
+
+    if (data.entrada_ia) {
+
+        entradaIA.innerText = "🚨 ENTRADA";
+        entradaIA.style.color = "lime";
+
+    } else {
+
+        entradaIA.innerText = "";
+    }
+
+} else {
+
+    analisisTendencia.style.display = "none";
+}
 
         });
 
