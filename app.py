@@ -19,6 +19,70 @@ from feature_engineering import crear_dataset
 from xgboost_predictor import XGBoostPredictor
 
 app = Flask(__name__)
+
+# ============================================
+# 🧠 MEMORIA DE PATRONES
+# ============================================
+
+MEMORIA_PATRONES_FILE = os.path.join(
+    app.root_path,
+    "static",
+    "memoria_patrones.json"
+)
+
+
+def cargar_memoria_patrones():
+
+    try:
+        if not os.path.exists(MEMORIA_PATRONES_FILE):
+            return {"patrones": []}
+
+        with open(
+            MEMORIA_PATRONES_FILE,
+            "r",
+            encoding="utf-8"
+        ) as archivo:
+
+            memoria = json.load(archivo)
+
+            if not isinstance(memoria, dict):
+                return {"patrones": []}
+
+            if "patrones" not in memoria:
+                memoria["patrones"] = []
+
+            return memoria
+
+    except Exception as e:
+
+        print(f"⚠️ Error cargando memoria de patrones: {e}")
+
+        return {"patrones": []}
+
+
+def guardar_memoria_patrones(memoria):
+
+    try:
+
+        with open(
+            MEMORIA_PATRONES_FILE,
+            "w",
+            encoding="utf-8"
+        ) as archivo:
+
+            json.dump(
+                memoria,
+                archivo,
+                ensure_ascii=False,
+                indent=2
+            )
+
+    except Exception as e:
+
+        print(f"⚠️ Error guardando memoria de patrones: {e}")
+
+
+memoria_patrones = cargar_memoria_patrones()
 CORS(app)
 # app.register_blueprint(auto_betano)
 app.secret_key = "cambia_esta_clave_secreta_por_una_muy_larga"
