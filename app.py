@@ -948,9 +948,23 @@ def obtener_historial():
     elif pred is None:
         pred = "clear"
 
+    with ANALISIS_LOCK:
+
+        tendencia = analisis_ia["tendencia"]
+        entrada = analisis_ia["entrada"]
+
+    minutos = obtener_minutos_tendencia()
+    porcentaje_acierto = obtener_porcentaje_acierto()
+
     return jsonify({
         "historial": historial,
-        "prediccion": pred
+        "prediccion": pred,
+
+        # 🧠 NUEVO ANALISIS
+        "tendencia": tendencia,
+        "minutos_tendencia": minutos,
+        "entrada_ia": entrada,
+        "acierto_ia": porcentaje_acierto
     })
 
 @app.route("/alerta_temporal")
