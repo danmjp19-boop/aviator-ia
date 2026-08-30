@@ -231,56 +231,43 @@ def obtener_porcentaje_acierto():
 
 def evaluar_senal_rapida(hist, pred_tf, pred_xgb):
 
-    """
-    Evalúa rápidamente una repetición de color
-    utilizando los modelos existentes.
-
-    La repetición NO genera entrada automáticamente.
-    """
-
     color_repetido = detectar_repeticion_colores(hist)
     soporte_detectado = detectar_soporte(hist)
 
     if color_repetido is None and not soporte_detectado:
-    return False
+        return False
 
     puntaje = 0
 
     if soporte_detectado:
-    puntaje += 1
-    print("📍 SOPORTE DETECTADO")
+        puntaje += 1
+        print("📍 SOPORTE DETECTADO")
 
-    # TensorFlow
     if isinstance(pred_tf, (int, float)):
-
         if pred_tf >= 0.70:
             puntaje += 1
 
-    # XGBoost
     if isinstance(pred_xgb, (int, float)):
-
         if pred_xgb >= 0.70:
             puntaje += 1
 
-    # Tendencia
     with ANALISIS_LOCK:
         tendencia = analisis_ia["tendencia"]
 
     if tendencia == "alcista":
         puntaje += 1
 
-    # Necesitamos confirmación de varios factores
     if puntaje >= 2:
 
         with ANALISIS_LOCK:
-
             analisis_ia["entrada"] = True
             analisis_ia["ultima_senal"] = datetime.now()
 
         print(
             f"🚨 ENTRADA IA CONFIRMADA | "
-            f"Color repetido: {color_repetido} | "
-            f"Puntaje: {puntaje}/3"
+            f"Color: {color_repetido} | "
+            f"Soporte: {soporte_detectado} | "
+            f"Puntaje: {puntaje}"
         )
 
         return True
