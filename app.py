@@ -157,7 +157,46 @@ def detectar_repeticion_colores(hist):
         return colores[0]
 
     return None
+# ============================================
+# 📍 DETECTOR DE PUNTOS DE SOPORTE
+# ============================================
 
+def detectar_soporte(hist):
+
+    if len(hist) < 8:
+        return False
+
+    # Convertimos las cuotas en el mismo movimiento
+    # que utiliza actualmente el gráfico.
+    serie = []
+    valor = 0
+
+    for cuota in hist:
+        valor += -1 if float(cuota) < 2.0 else 1
+        serie.append(valor)
+
+    # Últimos puntos
+    ultimos = serie[-8:]
+
+    # Buscar un mínimo local reciente
+    minimo = min(ultimos)
+    posicion = ultimos.index(minimo)
+
+    # El mínimo no debe estar en los extremos
+    if posicion == 0 or posicion == len(ultimos) - 1:
+        return False
+
+    anterior = ultimos[posicion - 1]
+    siguiente = ultimos[posicion + 1]
+
+    # El punto cae y después recupera
+    if minimo <= anterior and minimo <= siguiente:
+
+        # Confirmación de recuperación
+        if siguiente > minimo:
+            return True
+
+    return False
 
 def registrar_resultado_senal(resultado):
 
@@ -200,11 +239,16 @@ def evaluar_senal_rapida(hist, pred_tf, pred_xgb):
     """
 
     color_repetido = detectar_repeticion_colores(hist)
+    soporte_detectado = detectar_soporte(hist)
 
-    if color_repetido is None:
-        return False
+    if color_repetido is None and not soporte_detectado:
+    return False
 
     puntaje = 0
+
+    if soporte_detectado:
+    puntaje += 1
+    print("📍 SOPORTE DETECTADO")
 
     # TensorFlow
     if isinstance(pred_tf, (int, float)):
