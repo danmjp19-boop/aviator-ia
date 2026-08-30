@@ -46,6 +46,206 @@ MIN_SAMPLES = 10
 training_lock = threading.Lock()
 xgb_predictor = XGBoostPredictor()
 
+# ============================================
+# 🧠 ANALIZADOR DE TENDENCIA Y SEÑALES IA
+# ============================================
+
+analisis_ia = {
+    "tendencia": None,
+    "inicio_tendencia": None,
+    "aciertos": 0,
+    "fallos": 0,
+    "entrada": False,
+    "ultima_senal": None,
+    "ultima_evaluacion": None
+}
+
+ANALISIS_LOCK = threading.Lock()
+
+# Número de cuotas consecutivas necesarias para detectar repetición
+REPETICION_MINIMA = 3
+
+
+def obtener_color_cuota(cuota):
+    cuota = float(cuota)
+
+    if cuota < 2.0:
+        return "azul"
+
+    elif cuota < 10.0:
+        return "morado"
+
+    return "rosado"
+
+
+def calcular_tendencia(hist):
+    """
+    Determina tendencia utilizando el comportamiento reciente.
+    No genera una entrada por sí sola.
+    """
+
+    if len(hist) < 6:
+        return None
+
+    recientes = np.array(hist[-6:], dtype=float)
+
+    primeras = np.mean(recientes[:3])
+    ultimas = np.mean(recientes[3:])
+
+    diferencia = ultimas - primeras
+
+    if diferencia > 0.15:
+        return "alcista"
+
+    if diferencia < -0.15:
+        return "bajista"
+
+    return None
+
+
+def actualizar_tendencia(hist):
+    nueva_tendencia = calcular_tendencia(hist)
+
+    if nueva_tendencia is None:
+        return
+
+    with ANALISIS_LOCK:
+
+        if analisis_ia["tendencia"] != nueva_tendencia:
+
+            analisis_ia["tendencia"] = nueva_tendencia
+            analisis_ia["inicio_tendencia"] = datetime.now()
+
+            print(
+                f"📊 NUEVA TENDENCIA: "
+                f"{nueva_tendencia.upper()}"
+            )
+
+
+def obtener_minutos_tendencia():
+    with ANALISIS_LOCK:
+
+        inicio = analisis_ia["inicio_tendencia"]
+
+        if inicio is None:
+            return 0
+
+        segundos = (
+            datetime.now() - inicio
+        ).total_seconds()
+
+        return max(0, int(segundos // 60))
+
+
+def detectar_repeticion_colores(hist):
+    """
+    Detecta si las últimas cuotas presentan
+    repetición consecutiva de color.
+    """
+
+    if len(hist) < REPETICION_MINIMA:
+        return None
+
+    ultimas = hist[-REPETICION_MINIMA:]
+
+    colores = [
+        obtener_color_cuota(c)
+        for c in ultimas
+    ]
+
+    if len(set(colores)) == 1:
+        return colores[0]
+
+    return None
+
+
+def registrar_resultado_senal(resultado):
+
+    with ANALISIS_LOCK:
+
+        if resultado:
+            analisis_ia["aciertos"] += 1
+        else:
+            analisis_ia["fallos"] += 1
+
+
+def obtener_porcentaje_acierto():
+
+    with ANALISIS_LOCK:
+
+        total = (
+            analisis_ia["aciertos"] +
+            analisis_ia["fallos"]
+        )
+
+        if total == 0:
+            return 0
+
+        return round(
+            (
+                analisis_ia["aciertos"] /
+                total
+            ) * 100,
+            2
+        )
+
+
+def evaluar_senal_rapida(hist, pred_tf, pred_xgb):
+
+    """
+    Evalúa rápidamente una repetición de color
+    utilizando los modelos existentes.
+
+    La repetición NO genera entrada automáticamente.
+    """
+
+    color_repetido = detectar_repeticion_colores(hist)
+
+    if color_repetido is None:
+        return False
+
+    puntaje = 0
+
+    # TensorFlow
+    if isinstance(pred_tf, (int, float)):
+
+        if pred_tf >= 0.70:
+            puntaje += 1
+
+    # XGBoost
+    if isinstance(pred_xgb, (int, float)):
+
+        if pred_xgb >= 0.70:
+            puntaje += 1
+
+    # Tendencia
+    with ANALISIS_LOCK:
+        tendencia = analisis_ia["tendencia"]
+
+    if tendencia == "alcista":
+        puntaje += 1
+
+    # Necesitamos confirmación de varios factores
+    if puntaje >= 2:
+
+        with ANALISIS_LOCK:
+
+            analisis_ia["entrada"] = True
+            analisis_ia["ultima_senal"] = datetime.now()
+
+        print(
+            f"🚨 ENTRADA IA CONFIRMADA | "
+            f"Color repetido: {color_repetido} | "
+            f"Puntaje: {puntaje}/3"
+        )
+
+        return True
+
+    with ANALISIS_LOCK:
+        analisis_ia["entrada"] = False
+
+    return False
+
 cuotas_altas = {}
 # ============================================
 # DETECTOR TEMPORAL DE CUOTAS
