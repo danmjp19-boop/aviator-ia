@@ -1095,7 +1095,7 @@ def obtener_historial():
         "tendencia": tendencia,
         "minutos_tendencia": minutos,
         "entrada_ia": entrada,
-        "acierto_ia": porcentaje_acierto
+        "acierto_ia": porcentaje_acierto,
 
         "aciertos": ACIERTO_IA,
         "desaciertos": DESACIERTO_IA
