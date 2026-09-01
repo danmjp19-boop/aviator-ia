@@ -883,15 +883,16 @@ def crear_dataset(historial):
 
 
 def procesar_cuota(valor):
+
+    global ACIERTO_IA, DESACIERTO_IA, PREDICCION_PENDIENTE
+
     print(f"🔥 procesar_cuota recibió: {valor}")
 
     historial.append(valor)
 
-        # ============================================
+    # ============================================
     # 🎯 EVALUAR LA ENTRADA ANTERIOR
     # ============================================
-
-    global ACIERTO_IA, DESACIERTO_IA, PREDICCION_PENDIENTE
 
     if PREDICCION_PENDIENTE is True:
 
