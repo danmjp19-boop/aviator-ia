@@ -563,24 +563,6 @@ alertaTemporal.onclick = () => {
 })();
 </script>
 
-  function ocultarTeclado() {
-    const teclado = document.querySelector(".teclado");
-    const boton = document.getElementById("btnOcultarTeclado");
-
-    teclado.style.display = "none";
-    boton.innerText = "⌨️ Mostrar teclado";
-    boton.setAttribute("onclick", "mostrarTeclado()");
-}
-
-function mostrarTeclado() {
-    const teclado = document.querySelector(".teclado");
-    const boton = document.getElementById("btnOcultarTeclado");
-
-    teclado.style.display = "grid";
-    boton.innerText = "⌨️ Ocultar teclado";
-    boton.setAttribute("onclick", "ocultarTeclado()");
-}
-
 <!-- 🔥 CIERRE AUTOMÁTICO DE SESIÓN SIN REFRESCAR (PARTE 1) -->
 <script>
 setInterval(() => {
@@ -595,6 +577,26 @@ setInterval(() => {
             window.location.href = "/login";
         });
 }, 3000);
+</script>
+
+  <script>
+window.ocultarTeclado = function() {
+    const teclado = document.querySelector(".teclado");
+    const boton = document.getElementById("btnOcultarTeclado");
+
+    teclado.style.display = "none";
+    boton.innerText = "⌨️ Mostrar teclado";
+    boton.setAttribute("onclick", "mostrarTeclado()");
+};
+
+window.mostrarTeclado = function() {
+    const teclado = document.querySelector(".teclado");
+    const boton = document.getElementById("btnOcultarTeclado");
+
+    teclado.style.display = "grid";
+    boton.innerText = "⌨️ Ocultar teclado";
+    boton.setAttribute("onclick", "ocultarTeclado()");
+};
 </script>
 
 </body>
