@@ -126,6 +126,14 @@ analisis_ia = {
 
 ANALISIS_LOCK = threading.Lock()
 
+# ===============================
+# 🎯 CONTADOR REAL DE ACIERTOS IA
+# ===============================
+
+ACIERTO_IA = 0
+DESACIERTO_IA = 0
+PREDICCION_PENDIENTE = None
+
 # Número de cuotas consecutivas necesarias para detectar repetición
 REPETICION_MINIMA = 3
 
@@ -879,6 +887,30 @@ def procesar_cuota(valor):
 
     historial.append(valor)
 
+        # ============================================
+    # 🎯 EVALUAR LA ENTRADA ANTERIOR
+    # ============================================
+
+    global ACIERTO_IA, DESACIERTO_IA, PREDICCION_PENDIENTE
+
+    if PREDICCION_PENDIENTE is True:
+
+        if valor > 2.00:
+            ACIERTO_IA += 1
+            print(f"✅ ACIERTO IA | Cuota: {valor:.2f}x")
+
+        else:
+            DESACIERTO_IA += 1
+            print(f"❌ DESACIERTO IA | Cuota: {valor:.2f}x")
+
+        PREDICCION_PENDIENTE = None
+
+        print(
+            f"🎯 RESULTADOS → "
+            f"Aciertos: {ACIERTO_IA} | "
+            f"Desaciertos: {DESACIERTO_IA}"
+        )
+
     # 🔔 Detectar cuotas temporales
     detectar_cuota_temporal(valor)
 
@@ -954,15 +986,19 @@ def procesar_cuota(valor):
 
         pred = None
         print("❌ Ninguna IA pudo generar predicción.")
-            # ============================================
-    # 🚨 EVALUACIÓN RÁPIDA DE ENTRADA
+                # ============================================
+    # 🎯 REGISTRAR SEÑAL DE ENTRADA PARA EVALUAR
     # ============================================
 
-    entrada_rapida = evaluar_senal_rapida(
-        historial,
-        pred_tf,
-        pred_xgb
-    )
+    global PREDICCION_PENDIENTE
+
+    if pred is not None and pred >= 0.70:
+
+        PREDICCION_PENDIENTE = True
+
+        print(
+            f"🎯 ENTRADA IA REGISTRADA: {pred:.2%}"
+        )
 
     if entrada_rapida:
         print("🚨 ENTRADA GENERADA POR EVALUACIÓN IA")
