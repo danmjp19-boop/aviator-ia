@@ -1096,6 +1096,9 @@ def obtener_historial():
         "minutos_tendencia": minutos,
         "entrada_ia": entrada,
         "acierto_ia": porcentaje_acierto
+
+        "aciertos": ACIERTO_IA,
+        "desaciertos": DESACIERTO_IA
     })
 
 @app.route("/alerta_temporal")
