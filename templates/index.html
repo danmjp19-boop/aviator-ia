@@ -214,6 +214,58 @@ const aciertoIA =
 
 const entradaIA =
     document.getElementById("entradaIA");
+
+    const horaDiv = document.getElementById("hora");
+const input = document.getElementById("analisisInput");
+const btn = document.getElementById("analizarBtn");
+const graficoCtx =
+    document.getElementById("grafico").getContext("2d");
+
+function colorPorCuota(c) {
+    if (c < 2) return "blue";
+    if (c < 10) return "purple";
+    return "pink";
+}
+
+const referencePlugin = {
+    id: "referenceLines",
+    afterDraw: chart => {
+
+        const ctx = chart.ctx;
+        const area = chart.chartArea;
+        const yScale = chart.scales["y"];
+
+        const data =
+            chart.data.datasets[0].data;
+
+        if (!data || data.length === 0) return;
+
+        const maxVal = Math.max(...data);
+        const minVal = Math.min(...data);
+
+        const drawLine = (y, color, w = 2, dash = []) => {
+
+            const yPixel =
+                yScale.getPixelForValue(y);
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.setLineDash(dash);
+
+            ctx.moveTo(area.left, yPixel);
+            ctx.lineTo(area.right, yPixel);
+
+            ctx.lineWidth = w;
+            ctx.strokeStyle = color;
+            ctx.stroke();
+
+            ctx.restore();
+        };
+
+        drawLine(maxVal, "red", 2);
+        drawLine(minVal, "lime", 2);
+    }
+};
   const btnOcultarTeclado =
     document.getElementById("btnOcultarTeclado");
 
