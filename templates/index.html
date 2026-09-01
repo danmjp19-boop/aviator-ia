@@ -90,7 +90,7 @@ h1{color:#00ffff;margin:6px 0;}
     {% endfor %}
   </div>
 
-  <button id="btnOcultarTeclado" onclick="ocultarTeclado()">
+  <button id="btnOcultarTeclado" type="button">
     ⌨️ Ocultar teclado
 </button>
 
@@ -197,36 +197,30 @@ const aciertoIA =
 
 const entradaIA =
     document.getElementById("entradaIA");
-  const horaDiv=document.getElementById("hora");
-  const input=document.getElementById("analisisInput");
-  const btn=document.getElementById("analizarBtn");
-  const graficoCtx=document.getElementById("grafico").getContext("2d");
+  const btnOcultarTeclado =
+    document.getElementById("btnOcultarTeclado");
 
-  function colorPorCuota(c){if(c<2)return"blue";if(c<10)return"purple";return"pink";}
+btnOcultarTeclado.addEventListener("click", () => {
 
-  const referencePlugin={
-    id:'referenceLines',
-    afterDraw:chart=>{
-      const ctx=chart.ctx, area=chart.chartArea, yScale=chart.scales['y'];
-      const data=chart.data.datasets[0].data;
-      if(!data||data.length===0)return;
-      const maxVal=Math.max(...data);
-      const minVal=Math.min(...data);
-      const soporte=minVal,resistencia=maxVal;
-      const soporte2=soporte+(resistencia-soporte)*0.25;
-      const resistencia2=resistencia-(resistencia-soporte)*0.25;
-      const drawLine=(y,color,w=2,dash=[])=>{
-        const yPixel=yScale.getPixelForValue(y);
-        ctx.save();ctx.beginPath();ctx.setLineDash(dash);
-        ctx.moveTo(area.left,yPixel);ctx.lineTo(area.right,yPixel);
-        ctx.lineWidth=w;ctx.strokeStyle=color;ctx.stroke();ctx.restore();
-      };
-      drawLine(resistencia,'red',2,[]);
-      drawLine(resistencia2,'red',1,[6,4]);
-      drawLine(soporte2,'lime',1,[6,4]);
-      drawLine(soporte,'lime',2,[]);
-    }
-  };
+    const teclado = document.querySelector(".teclado");
+    const acciones = document.querySelector(".acciones");
+    const botonIngresar = acciones.querySelector("button:first-child");
+
+    teclado.style.display = "none";
+    botonIngresar.style.display = "none";
+
+    btnOcultarTeclado.innerText = "⌨️ Mostrar teclado";
+
+    btnOcultarTeclado.onclick = () => {
+
+        teclado.style.display = "grid";
+        botonIngresar.style.display = "block";
+
+        btnOcultarTeclado.innerText = "⌨️ Ocultar teclado";
+
+        btnOcultarTeclado.onclick = null;
+    };
+});
 
   function clampOrResetScales(chart){
     try{
