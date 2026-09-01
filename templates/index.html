@@ -90,6 +90,10 @@ h1{color:#00ffff;margin:6px 0;}
     {% endfor %}
   </div>
 
+  <button id="btnOcultarTeclado" onclick="ocultarTeclado()">
+    ⌨️ Ocultar teclado
+</button>
+
   <div class="acciones">
     <button onclick="guardar()">Ingresar</button>
     <button onclick="deshacer()">↩️ Deshacer</button>
@@ -558,6 +562,24 @@ alertaTemporal.onclick = () => {
   if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initMT2);}else{initMT2();}
 })();
 </script>
+
+  function ocultarTeclado() {
+    const teclado = document.querySelector(".teclado");
+    const boton = document.getElementById("btnOcultarTeclado");
+
+    teclado.style.display = "none";
+    boton.innerText = "⌨️ Mostrar teclado";
+    boton.setAttribute("onclick", "mostrarTeclado()");
+}
+
+function mostrarTeclado() {
+    const teclado = document.querySelector(".teclado");
+    const boton = document.getElementById("btnOcultarTeclado");
+
+    teclado.style.display = "grid";
+    boton.innerText = "⌨️ Ocultar teclado";
+    boton.setAttribute("onclick", "ocultarTeclado()");
+}
 
 <!-- 🔥 CIERRE AUTOMÁTICO DE SESIÓN SIN REFRESCAR (PARTE 1) -->
 <script>
