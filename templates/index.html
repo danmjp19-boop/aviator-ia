@@ -238,32 +238,31 @@ const referencePlugin = {
 
         if (!area || !yScale) return;
 
-        // Obtener todas las cuotas del gráfico
         const data = chart.data.datasets[0].data;
 
         if (!data || data.length === 0) return;
 
-        // Todas las cuotas ROSAS (>= 10x)
-        const nivelesRosa = data.filter(valor => valor >= 10);
+        // Buscar todas las cuotas rosas (10x o superiores)
+        const nivelesRosa = data.filter(valor => Number(valor) >= 10);
 
         nivelesRosa.forEach(nivel => {
 
             const yPixel = yScale.getPixelForValue(nivel);
 
-            // Si la línea está fuera del área visible, no dibujarla
+            // Solo dibujar si está dentro del gráfico
             if (yPixel < area.top || yPixel > area.bottom) return;
 
             ctx.save();
 
             ctx.beginPath();
 
-            // Línea blanca horizontal
             ctx.moveTo(area.left, yPixel);
             ctx.lineTo(area.right, yPixel);
 
-            ctx.lineWidth = 1.5;
-            ctx.strokeStyle = "rgba(255,255,255,0.80)";
-            ctx.setLineDash([6, 4]);
+            // Línea blanca visible
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 3;
+            ctx.setLineDash([]);
 
             ctx.stroke();
 
