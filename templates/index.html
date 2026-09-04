@@ -229,41 +229,46 @@ function colorPorCuota(c) {
 
 const referencePlugin = {
     id: "referenceLines",
+
     afterDraw: chart => {
 
         const ctx = chart.ctx;
         const area = chart.chartArea;
         const yScale = chart.scales["y"];
 
-        const data =
-            chart.data.datasets[0].data;
+        if (!area || !yScale) return;
+
+        // Obtener todas las cuotas del gráfico
+        const data = chart.data.datasets[0].data;
 
         if (!data || data.length === 0) return;
 
-        const maxVal = Math.max(...data);
-        const minVal = Math.min(...data);
+        // Todas las cuotas ROSAS (>= 10x)
+        const nivelesRosa = data.filter(valor => valor >= 10);
 
-        const drawLine = (y, color, w = 2, dash = []) => {
+        nivelesRosa.forEach(nivel => {
 
-            const yPixel =
-                yScale.getPixelForValue(y);
+            const yPixel = yScale.getPixelForValue(nivel);
+
+            // Si la línea está fuera del área visible, no dibujarla
+            if (yPixel < area.top || yPixel > area.bottom) return;
 
             ctx.save();
-            ctx.beginPath();
-            ctx.setLineDash(dash);
 
+            ctx.beginPath();
+
+            // Línea blanca horizontal
             ctx.moveTo(area.left, yPixel);
             ctx.lineTo(area.right, yPixel);
 
-            ctx.lineWidth = w;
-            ctx.strokeStyle = color;
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = "rgba(255,255,255,0.80)";
+            ctx.setLineDash([6, 4]);
+
             ctx.stroke();
 
             ctx.restore();
-        };
-
-        drawLine(maxVal, "red", 2);
-        drawLine(minVal, "lime", 2);
+        });
     }
 };
   const btnOcultarTeclado =
