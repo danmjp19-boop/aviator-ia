@@ -343,19 +343,40 @@ btnOcultarTeclado.addEventListener("click", () => {
   hammerArea.on('pinchstart pinchmove pinchend',e=>e.preventDefault());
 
   function actualizarGrafico(){
-    const cuotas=Array.from(historialDiv.children).map(s=>parseFloat(s.innerText));
-    if(cuotas.length===0){grafico.data.labels=[];grafico.data.datasets[0].data=[];grafico.update();return;}
-    let valor=0;
-    const serie=cuotas.map(c=>{valor+=(c<2?-1:1);return valor;});
-    grafico.data.labels=serie.map((_,i)=>i+1);
-    grafico.data.datasets[0].data=serie;
-    grafico.data.datasets[0].pointBackgroundColor=cuotas.map(c=>colorPorCuota(c));
-    const max=Math.max(...serie,0),min=Math.min(...serie,0);
-    const absMax=Math.max(Math.abs(max),Math.abs(min))||1;
-    grafico.options.scales.y.min=-absMax-1;
-    grafico.options.scales.y.max=absMax+1;
+
+    const cuotas = Array.from(historialDiv.children)
+        .map(s => parseFloat(s.innerText));
+
+    if(cuotas.length === 0){
+
+        grafico.data.labels = [];
+        grafico.data.datasets[0].data = [];
+
+        grafico.update();
+        return;
+    }
+
+    // 📈 Graficar las cuotas reales
+    grafico.data.labels = cuotas.map((_, i) => i + 1);
+
+    grafico.data.datasets[0].data = cuotas;
+
+    // 🎨 Colores de cada cuota
+    grafico.data.datasets[0].pointBackgroundColor =
+        cuotas.map(c => colorPorCuota(c));
+
+    grafico.data.datasets[0].pointBorderColor =
+        cuotas.map(c => colorPorCuota(c));
+
+    // 📏 Escala automática
+    const max = Math.max(...cuotas);
+    const min = Math.min(...cuotas);
+
+    grafico.options.scales.y.min = Math.max(0, min - 0.5);
+    grafico.options.scales.y.max = max + 1;
+
     grafico.update('none');
-  }
+}
 
   window.tecla=t=>{if(t==="Borrar")display.innerText=display.innerText.slice(0,-1);else display.innerText+=t;};
 
