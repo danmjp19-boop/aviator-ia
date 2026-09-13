@@ -507,8 +507,12 @@ if (data.tendencia) {
     tiempoTendencia.innerText =
         `DESDE HACE ${data.minutos_tendencia} MIN`;
 
-    aciertoIA.innerText =
-        `🎯 ACIERTO IA: ${data.acierto_ia}%`;
+    aciertoIA.innerHTML =
+    `🎯 ACIERTO IA: ${data.acierto_ia}% 
+    &nbsp;&nbsp;&nbsp;
+    <span style="color:#00ff00;font-size:1.2em;">✔ (${data.aciertos || 0})</span>
+    &nbsp;&nbsp;
+    <span style="color:#ff0000;font-size:1.2em;">✖ (${data.desaciertos || 0})</span>`;
 
     if (data.entrada_ia) {
 
