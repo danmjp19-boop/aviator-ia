@@ -282,23 +282,15 @@ def registrar_resultado_senal(resultado):
 
 def obtener_porcentaje_acierto():
 
-    with ANALISIS_LOCK:
+    total = ACIERTO_IA + DESACIERTO_IA
 
-        total = (
-            analisis_ia["aciertos"] +
-            analisis_ia["fallos"]
-        )
+    if total == 0:
+        return 0
 
-        if total == 0:
-            return 0
-
-        return round(
-            (
-                analisis_ia["aciertos"] /
-                total
-            ) * 100,
-            2
-        )
+    return round(
+        (ACIERTO_IA / total) * 100,
+        2
+    )
 
 
 def evaluar_senal_rapida(hist, pred_tf, pred_xgb):
