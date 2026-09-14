@@ -983,12 +983,17 @@ def procesar_cuota(valor):
     # 🎯 REGISTRAR SEÑAL DE ENTRADA PARA EVALUAR
     # ============================================
 
-    if pred is not None and pred >= 0.70:
+    if pred is not None and pred >= 0.60:
 
-        PREDICCION_PENDIENTE = True
+    PREDICCION_PENDIENTE = True
 
+    if pred >= 0.70:
         print(
             f"🎯 ENTRADA IA REGISTRADA: {pred:.2%}"
+        )
+    else:
+        print(
+            f"🟡 POSIBLE ENTRADA IA REGISTRADA: {pred:.2%}"
         )
 
     if entrada_rapida:
