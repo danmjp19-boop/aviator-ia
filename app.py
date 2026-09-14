@@ -983,7 +983,7 @@ def procesar_cuota(valor):
     # 🎯 REGISTRAR SEÑAL DE ENTRADA PARA EVALUAR
     # ============================================
 
-    if pred is not None and pred >= 0.60:
+if pred is not None and pred >= 0.60:
 
     PREDICCION_PENDIENTE = True
 
