@@ -2,7 +2,6 @@ import os
 import joblib
 import pandas as pd
 import xgboost as xgb
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
 MODEL_PATH = "xgboost_model.pkl"
@@ -14,33 +13,54 @@ class XGBoostPredictor:
         self.model = None
 
         if os.path.exists(MODEL_PATH):
-            self.model = joblib.load(MODEL_PATH)
+            try:
+                self.model = joblib.load(MODEL_PATH)
+                print("🧠 Modelo XGBoost histórico cargado.")
+            except Exception as e:
+                print(f"⚠️ No se pudo cargar XGBoost: {e}")
+                self.model = None
 
     def entrenar(self, df):
 
         print(f"📊 XGBoost recibió {len(df)} filas")
 
-        # Solo para pruebas
-        if len(df) < 5:
-            print("❌ Muy pocas filas para entrenar")
+        if len(df) < 10:
+            print("❌ Muy pocas filas para entrenar XGBoost")
             return False
-
-        print("🚀 Iniciando entrenamiento XGBoost")
 
         X = df.drop(columns=["objetivo"])
         y = df["objetivo"]
 
-        # Verificar que existan las dos clases
+        # ============================================
+        # 🔎 VERIFICAR LAS DOS CLASES
+        # ============================================
+
         if len(y.unique()) < 2:
-            print("⚠️ No hay suficientes clases (0 y 1) para entrenar.")
+            print(
+                "⚠️ No hay suficientes clases "
+                "(0 y 1) para entrenar."
+            )
             return False
 
-        X_train, X_test, y_train, y_test = train_test_split(
-            X,
-            y,
-            test_size=0.2,
-            random_state=42
-        )
+        # ============================================
+        # 📅 VALIDACIÓN TEMPORAL
+        # ============================================
+
+        punto_corte = int(len(X) * 0.80)
+
+        X_train = X.iloc[:punto_corte]
+        y_train = y.iloc[:punto_corte]
+
+        X_test = X.iloc[punto_corte:]
+        y_test = y.iloc[punto_corte:]
+
+        if len(X_test) == 0:
+            print("⚠️ No hay datos suficientes para validar.")
+            return False
+
+        # ============================================
+        # 🌳 CREAR MODELO
+        # ============================================
 
         self.model = xgb.XGBClassifier(
             n_estimators=200,
@@ -51,26 +71,67 @@ class XGBoostPredictor:
             random_state=42
         )
 
-        self.model.fit(X_train, y_train)
+        print("🚀 Entrenando XGBoost con histórico...")
+
+        self.model.fit(
+            X_train,
+            y_train
+        )
 
         print("✅ XGBoost terminó fit()")
 
+        # ============================================
+        # 🧪 VALIDACIÓN CON DATOS POSTERIORES
+        # ============================================
+
         pred = self.model.predict(X_test)
 
-        acc = accuracy_score(y_test, pred)
+        acc = accuracy_score(
+            y_test,
+            pred
+        )
 
-        joblib.dump(self.model, MODEL_PATH)
+        # ============================================
+        # 💾 GUARDAR MODELO
+        # ============================================
 
-        print(f"✅ XGBoost entrenado | Precisión: {acc:.2%}")
+        joblib.dump(
+            self.model,
+            MODEL_PATH
+        )
+
+        print(
+            f"🧪 XGBoost | Precisión validación: "
+            f"{acc:.2%}"
+        )
+
+        print(
+            f"💾 Modelo XGBoost actualizado con "
+            f"{len(X_train)} patrones históricos."
+        )
 
         return acc
 
     def predecir(self, fila):
 
         if self.model is None:
-            print("⏳ Modelo XGBoost aún no entrenado.")
+            print(
+                "⏳ Modelo XGBoost aún no entrenado."
+            )
             return None
 
-        prob = self.model.predict_proba(fila)[0][1]
+        try:
 
-        return float(prob)
+            prob = self.model.predict_proba(
+                fila
+            )[0][1]
+
+            return float(prob)
+
+        except Exception as e:
+
+            print(
+                f"⚠️ Error prediciendo con XGBoost: {e}"
+            )
+
+            return None
