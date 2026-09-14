@@ -469,36 +469,155 @@ def entrenar_en_hilo():
 
 def entrenar_neuronal():
     global model, scaler
+
     with training_lock:
+
         if not os.path.exists(DATA_PATH):
             return
+
         try:
             df = pd.read_csv(DATA_PATH)
+
         except Exception as e:
             print("⚠️ Error leyendo CSV:", e)
             return
+
         if "cuota" not in df.columns or len(df) < MIN_SAMPLES:
             return
+
         cuotas = df["cuota"].astype(float).tolist()
+
         X, y = [], []
+
         for i in range(WINDOW, len(cuotas)):
+
             X.append(cuotas[i - WINDOW:i])
-            y.append(1 if cuotas[i] > 2.0 else 0)
+
+            y.append(
+                1 if cuotas[i] > 2.0 else 0
+            )
+
         X = np.array(X, dtype=float)
         y = np.array(y, dtype=float)
+
+        # ============================================
+        # 📊 NORMALIZACIÓN
+        # ============================================
+
         scaler_local = MinMaxScaler()
+
         X_scaled = scaler_local.fit_transform(X)
-        if model is None or model.input_shape[1] != X_scaled.shape[1]:
-            model_local = construir_modelo(X_scaled.shape[1])
+
+        # ============================================
+        # 🧪 SEPARAR ENTRENAMIENTO Y VALIDACIÓN
+        # ============================================
+
+        total_muestras = len(X_scaled)
+
+        if total_muestras >= 10:
+
+            punto_corte = int(total_muestras * 0.80)
+
+            X_train = X_scaled[:punto_corte]
+            y_train = y[:punto_corte]
+
+            X_val = X_scaled[punto_corte:]
+            y_val = y[punto_corte:]
+
         else:
+
+            X_train = X_scaled
+            y_train = y
+
+            X_val = None
+            y_val = None
+
+        # ============================================
+        # 🧠 CREAR / RECUPERAR MODELO
+        # ============================================
+
+        if (
+            model is None
+            or model.input_shape[1] != X_scaled.shape[1]
+        ):
+
+            model_local = construir_modelo(
+                X_scaled.shape[1]
+            )
+
+        else:
+
             model_local = model
+
         print("🧠 Entrenando modelo neuronal...")
-        model_local.fit(X_scaled, y, epochs=30, batch_size=16, verbose=0)
+
+        # ============================================
+        # 🎯 ENTRENAMIENTO
+        # ============================================
+
+        if X_val is not None and len(X_val) > 0:
+
+            historial_entrenamiento = model_local.fit(
+                X_train,
+                y_train,
+                validation_data=(X_val, y_val),
+                epochs=30,
+                batch_size=16,
+                verbose=0,
+                shuffle=False
+            )
+
+            precision_entrenamiento = (
+                historial_entrenamiento.history["accuracy"][-1]
+            )
+
+            precision_validacion = (
+                historial_entrenamiento.history["val_accuracy"][-1]
+            )
+
+            print(
+                f"📚 Precisión entrenamiento: "
+                f"{precision_entrenamiento:.2%}"
+            )
+
+            print(
+                f"🧪 Precisión validación: "
+                f"{precision_validacion:.2%}"
+            )
+
+        else:
+
+            model_local.fit(
+                X_train,
+                y_train,
+                epochs=30,
+                batch_size=16,
+                verbose=0,
+                shuffle=False
+            )
+
+            print(
+                "⚠️ Muy pocos datos para realizar "
+                "una validación confiable."
+            )
+
+        # ============================================
+        # 💾 GUARDAR MODELO Y SCALER
+        # ============================================
+
         model_local.save(MODEL_PATH)
-        joblib.dump(scaler_local, SCALER_PATH)
+
+        joblib.dump(
+            scaler_local,
+            SCALER_PATH
+        )
+
         model = model_local
         scaler = scaler_local
-        print("✅ Entrenamiento completado y modelo guardado.")
+
+        print(
+            "✅ Entrenamiento completado y modelo guardado."
+        )
 
 def predecir_con_neuronal(hist):
     global model, scaler
