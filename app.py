@@ -980,24 +980,22 @@ def procesar_cuota(valor):
         pred = None
         print("❌ Ninguna IA pudo generar predicción.")
                 # ============================================
+       # ============================================
     # 🎯 REGISTRAR SEÑAL DE ENTRADA PARA EVALUAR
     # ============================================
 
-if pred is not None and pred >= 0.60:
+    if pred is not None and pred >= 0.60:
 
-    PREDICCION_PENDIENTE = True
+        PREDICCION_PENDIENTE = True
 
-    if pred >= 0.70:
-        print(
-            f"🎯 ENTRADA IA REGISTRADA: {pred:.2%}"
-        )
-    else:
-        print(
-            f"🟡 POSIBLE ENTRADA IA REGISTRADA: {pred:.2%}"
-        )
-
-    if entrada_rapida:
-        print("🚨 ENTRADA GENERADA POR EVALUACIÓN IA")
+        if pred >= 0.70:
+            print(
+                f"🎯 ENTRADA IA REGISTRADA: {pred:.2%}"
+            )
+        else:
+            print(
+                f"🟡 POSIBLE ENTRADA IA REGISTRADA: {pred:.2%}"
+            )
 
     if isinstance(pred, (int, float)):
 
