@@ -1039,9 +1039,24 @@ def borrar_ultimo():
 @login_required
 def limpiar_todo():
     global historial
+    global ACIERTO_IA, DESACIERTO_IA, PREDICCION_PENDIENTE
+
     historial = []
+
+    # Reiniciar contadores IA
+    ACIERTO_IA = 0
+    DESACIERTO_IA = 0
+    PREDICCION_PENDIENTE = None
+
     pd.DataFrame(historial, columns=["cuota"]).to_csv(DATA_PATH, index=False)
-    return jsonify({"status": "ok"})
+
+    return jsonify({
+        "status": "ok",
+        "aciertos": 0,
+        "desaciertos": 0
+    })
+
+@app.route('/ping')
 
 @app.route('/ping')
 def ping():
